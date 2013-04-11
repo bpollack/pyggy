@@ -2,16 +2,16 @@ typedef int64_t git_off_t;
 typedef int64_t git_time_t;
 
 typedef enum {
-     GIT_OBJ_ANY = -2,
-     GIT_OBJ_BAD = -1,
-     GIT_OBJ__EXT1 = 0,
-     GIT_OBJ_COMMIT = 1,
-     GIT_OBJ_TREE = 2,
-     GIT_OBJ_BLOB = 3,
-     GIT_OBJ_TAG = 4,
-     GIT_OBJ__EXT2 = 5,
-     GIT_OBJ_OFS_DELTA = 6,
-     GIT_OBJ_REF_DELTA = 7,
+     GIT_OBJ_ANY = ...,
+     GIT_OBJ_BAD = ...,
+     GIT_OBJ__EXT1 = ...,
+     GIT_OBJ_COMMIT = ...,
+     GIT_OBJ_TREE = ...,
+     GIT_OBJ_BLOB = ...,
+     GIT_OBJ_TAG = ...,
+     GIT_OBJ__EXT2 = ...,
+     GIT_OBJ_OFS_DELTA = ...,
+     GIT_OBJ_REF_DELTA = ...,
 } git_otype;
 
 typedef struct git_odb git_odb;
@@ -52,24 +52,24 @@ typedef struct git_signature {
 typedef struct git_reference git_reference;
 
 typedef enum {
-    GIT_REF_INVALID = 0,
-    GIT_REF_OID = 1,
-    GIT_REF_SYMBOLIC = 2,
+    GIT_REF_INVALID = ...,
+    GIT_REF_OID = ...,
+    GIT_REF_SYMBOLIC = ...,
     GIT_REF_LISTALL = ...,
 } git_ref_t;
 
 typedef enum {
-    GIT_BRANCH_LOCAL = 1,
-    GIT_BRANCH_REMOTE = 2,
+    GIT_BRANCH_LOCAL = ...,
+    GIT_BRANCH_REMOTE = ...,
 } git_branch_t;
 
 typedef enum {
-    GIT_FILEMODE_NEW = 0000000,
-    GIT_FILEMODE_TREE = 0040000,
-    GIT_FILEMODE_BLOB = 0100644,
-    GIT_FILEMODE_BLOB_EXECUTABLE = 0100755,
-    GIT_FILEMODE_LINK = 0120000,
-    GIT_FILEMODE_COMMIT = 0160000,
+    GIT_FILEMODE_NEW = ...,
+    GIT_FILEMODE_TREE = ...,
+    GIT_FILEMODE_BLOB = ...,
+    GIT_FILEMODE_BLOB_EXECUTABLE = ...,
+    GIT_FILEMODE_LINK = ...,
+    GIT_FILEMODE_COMMIT = ...,
 } git_filemode_t;
 
 typedef struct git_refspec git_refspec;

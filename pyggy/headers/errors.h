@@ -1,4 +1,4 @@
-enum {
+typedef enum {
     GIT_OK = ...,
     GIT_ERROR = ...,
     GIT_ENOTFOUND = ...,
@@ -15,7 +15,7 @@ enum {
 
     GIT_PASSTHROUGH = ...,
     GIT_ITEROVER = ...,
-};
+} git_base_error_t;
 
 typedef struct {
     char *message;

@@ -1,5 +1,5 @@
 from .core import lib, ffi
-from .objects import Commit
+from .objects import Commit, Raw
 from . import error
 
 
@@ -46,3 +46,6 @@ class Repo(object):
     @property
     def path(self):
         return self._path
+
+    def raw(self, oid):
+        return Raw(self, oid)

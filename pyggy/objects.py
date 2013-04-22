@@ -38,6 +38,28 @@ class User(object):
         return '%s <%s>' % (self.name, self.email)
 
 
+class Raw(object):
+    def __init__(self, repo, oid=None):
+        self._repo = weakref.proxy(repo)
+        self.oid = Oid(oid)
+        self.data = None
+
+    def read(self):
+        odb = ffi.new('git_odb **')
+        err = lib.git_repository_odb(odb, self._repo._repo)
+        if err:
+            raise error.GitException
+        odb = odb[0]
+        odb_object = ffi.new('git_odb_object **')
+        err = lib.git_odb_read(odb_object, odb, self.oid.oid)
+        if err:
+            raise error.GitException
+        odb_object = odb_object[0]
+        self.data = ffi.buffer(lib.git_odb_object_data(odb_object), lib.git_odb_object_size(odb_object))[:]
+        lib.git_odb_object_free(odb_object)
+        lib.git_odb_free(odb)
+
+
 class Commit(object):
     def __init__(self, repo, oid=None):
         self._repo = weakref.proxy(repo)
@@ -48,7 +70,8 @@ class Commit(object):
         if not self._dirty:
             return
         commit = ffi.new('git_commit **')
-        err = lib.git_commit_lookup_prefix(commit, self._repo._repo, self.oid.oid, len(self.oid))
+        err = lib.git_commit_lookup_prefix(commit, self._repo._repo,
+                                           self.oid.oid, len(self.oid))
         if err:
             if err == lib.GIT_ENOTFOUND:
                 raise KeyError

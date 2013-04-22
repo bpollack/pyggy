@@ -48,7 +48,7 @@ class Commit(object):
         if not self._dirty:
             return
         commit = ffi.new('git_commit **')
-        err = lib.git_commit_lookup_prefix(commit, self.repo._repo, self.oid.oid, len(self.oid))
+        err = lib.git_commit_lookup_prefix(commit, self._repo._repo, self.oid.oid, len(self.oid))
         if err:
             if err == lib.GIT_ENOTFOUND:
                 raise KeyError

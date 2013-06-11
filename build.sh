@@ -5,7 +5,7 @@ set -e
 cd $(hg root)/libgit2
 test -d build && rm -r build
 mkdir build && cd build
-cmake ..
+cmake .. -DBUILD_CLAR=OFF
 cmake --build .
 
 cd $(hg root)

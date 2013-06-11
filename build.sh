@@ -9,7 +9,7 @@ cmake ..
 cmake --build .
 
 cd $(hg root)
-if [$(uname) = "Darwin"]
+if [ $(uname) = "Darwin" ]
 then
     export PKG_CONFIG_PATH=/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig
 fi

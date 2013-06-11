@@ -104,6 +104,6 @@ int git_odb_hash(git_oid *out, const void *data, size_t len, git_otype type);
 int git_odb_hashfile(git_oid *out, const char *path, git_otype type);
 void git_odb_object_free(git_odb_object *object);
 const git_oid * git_odb_object_id(git_odb_object *object);
-void * git_odb_object_data(git_odb_object *object);
+const void * git_odb_object_data(git_odb_object *object);
 size_t git_odb_object_size(git_odb_object *object);
 git_otype git_odb_object_type(git_odb_object *object);

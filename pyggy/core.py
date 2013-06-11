@@ -1,3 +1,5 @@
+from os import path
+
 from cffi import FFI
 
 import headers
@@ -52,8 +54,11 @@ defs = '\n'.join([
     headers.stash,
 ])
 ffi.cdef(defs)
+
+__base = path.abspath(path.join(path.dirname(__file__), '..', 'libgit2'))
+print 'BASE: %s' % __base
 lib = ffi.verify("#include <git2.h>",
                  libraries=['git2'],
-                 library_dirs=['/usr/local/opt/libgit2/lib'],
-                 include_dirs=['/usr/local/opt/libgit2/include'],
+                 library_dirs=[path.join(__base, 'build')],
+                 include_dirs=[path.join(__base, 'include')],
                  ext_package='pyggy')

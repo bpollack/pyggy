@@ -55,4 +55,5 @@ ffi.cdef(defs)
 lib = ffi.verify("#include <git2.h>",
                  libraries=['git2'],
                  library_dirs=['/usr/local/opt/libgit2/lib'],
-                 include_dirs=['/usr/local/opt/libgit2/include'])
+                 include_dirs=['/usr/local/opt/libgit2/include'],
+                 ext_package='pyggy')

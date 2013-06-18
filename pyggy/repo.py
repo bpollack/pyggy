@@ -20,14 +20,14 @@ class Repo(object):
         heads = {}
 
         @ffi.callback('int(char *, git_branch_t, void *)')
-        def buildup(name, type, payload):
+        def add_branch(name, type, payload):
             oid = ffi.new('git_oid *')
             name = ffi.string(name)
             if not lib.git_reference_name_to_id(oid, self._repo, 'refs/heads/' + name):
                 heads[name] = Oid(oid).sha
             return 0
 
-        lib.git_branch_foreach(self._repo, lib.GIT_BRANCH_LOCAL, buildup, ffi.NULL)
+        lib.git_branch_foreach(self._repo, lib.GIT_BRANCH_LOCAL, add_branch, ffi.NULL)
         return heads
 
     def commit(self, oid):

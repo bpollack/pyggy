@@ -18,7 +18,7 @@ class Oid(object):
         return self._sha
 
     @property
-    def oid(self):
+    def pointer(self):
         return self._oid
 
     def __len__(self):
@@ -51,7 +51,7 @@ class Raw(object):
             raise error.GitException
         odb = odb[0]
         odb_object = ffi.new('git_odb_object **')
-        err = lib.git_odb_read(odb_object, odb, self.oid.oid)
+        err = lib.git_odb_read(odb_object, odb, self.oid.pointer)
         if err:
             raise error.GitException
         odb_object = odb_object[0]
@@ -71,7 +71,7 @@ class Commit(object):
             return
         commit = ffi.new('git_commit **')
         err = lib.git_commit_lookup_prefix(commit, self._repo.pointer,
-                                           self.oid.oid, len(self.oid))
+                                           self.oid.pointer, len(self.oid))
         if err:
             if err == lib.GIT_ENOTFOUND:
                 raise KeyError

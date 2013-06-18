@@ -1,5 +1,5 @@
 from .core import lib, ffi
-from .objects import Commit, Raw
+from .objects import Commit, Oid, Raw, Walker
 from . import error
 
 
@@ -14,6 +14,20 @@ class Repo(object):
 
     def __del__(self):
         self.close()
+
+    def branches(self):
+        heads = {}
+
+        @ffi.callback('int(char *, git_branch_t, void *)')
+        def buildup(name, type, payload):
+            oid = ffi.new('git_oid *')
+            name = ffi.string(name)
+            if not lib.git_reference_name_to_id(oid, self._repo, 'refs/heads/' + name):
+                heads[name] = Oid(oid).sha
+            return 0
+
+        lib.git_branch_foreach(self._repo, lib.GIT_BRANCH_LOCAL, buildup, ffi.NULL)
+        return heads
 
     def commit(self, oid):
         return Commit(self, oid)

@@ -46,7 +46,7 @@ class Raw(object):
 
     def read(self):
         odb = ffi.new('git_odb **')
-        err = lib.git_repository_odb(odb, self._repo._repo)
+        err = lib.git_repository_odb(odb, self._repo.pointer)
         if err:
             raise error.GitException
         odb = odb[0]
@@ -70,7 +70,7 @@ class Commit(object):
         if not self._dirty:
             return
         commit = ffi.new('git_commit **')
-        err = lib.git_commit_lookup_prefix(commit, self._repo._repo,
+        err = lib.git_commit_lookup_prefix(commit, self._repo.pointer,
                                            self.oid.oid, len(self.oid))
         if err:
             if err == lib.GIT_ENOTFOUND:

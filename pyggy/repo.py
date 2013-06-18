@@ -37,7 +37,6 @@ class Repo(object):
         repo = ffi.new('git_repository **')
         err = lib.git_repository_open_ext(repo, self.path, 0, ffi.NULL)
         if err:
-            self._repo = None
             if err == lib.GIT_ENOTFOUND:
                 raise RepoNotFoundException(self.path)
             raise error.GitException
@@ -49,3 +48,7 @@ class Repo(object):
 
     def raw(self, oid):
         return Raw(self, oid)
+
+    @property
+    def pointer(self):
+        return self._repo

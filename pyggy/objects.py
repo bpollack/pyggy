@@ -50,14 +50,16 @@ class Raw(object):
         if err:
             raise error.GitException
         odb = odb[0]
-        odb_object = ffi.new('git_odb_object **')
-        err = lib.git_odb_read(odb_object, odb, self.oid.pointer)
-        if err:
-            raise error.GitException
-        odb_object = odb_object[0]
-        self.data = ffi.buffer(lib.git_odb_object_data(odb_object), lib.git_odb_object_size(odb_object))[:]
-        lib.git_odb_object_free(odb_object)
-        lib.git_odb_free(odb)
+        try:
+            odb_object = ffi.new('git_odb_object **')
+            err = lib.git_odb_read(odb_object, odb, self.oid.pointer)
+            if err:
+                raise error.GitException
+            odb_object = odb_object[0]
+            self.data = ffi.buffer(lib.git_odb_object_data(odb_object), lib.git_odb_object_size(odb_object))[:]
+            lib.git_odb_object_free(odb_object)
+        finally:
+            lib.git_odb_free(odb)
 
 
 class Commit(object):

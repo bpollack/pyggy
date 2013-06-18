@@ -1,5 +1,6 @@
 int git_tree_lookup(git_tree **out, git_repository *repo, const git_oid *id);
 int git_tree_lookup_prefix(git_tree **out, git_repository *repo, const git_oid *id, size_t len);
+void git_tree_free(git_tree *tree);
 const git_oid * git_tree_id(const git_tree *tree);
 git_repository * git_tree_owner(const git_tree *tree);
 size_t git_tree_entrycount(const git_tree *tree);

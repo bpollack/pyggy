@@ -96,8 +96,7 @@ class Commit(object):
             self._parent_ids.append(lib.git_commit_parent_id(commit, idx))
         self._parents = None
 
-        self._tree_id = lib.git_commit_tree_id(commit)
-        self._tree = None
+        self._tree = Tree(self._repo(), lib.git_commit_tree_id(commit))
 
         lib.git_commit_free(commit)
 
@@ -118,8 +117,48 @@ class Commit(object):
         self.read()
         return self._message
 
+    @property
+    def tree(self):
+        self.read()
+        return self._tree
+
     def __repr__(self):
         return '<Commit(%s)>' % self.oid
+
+
+class Tree(object):
+    def __init__(self, repo, oid):
+        self._repo = weakref.ref(repo)
+        self.oid = Oid(oid)
+        self._dirty = True
+        self._manifest = None
+
+    def read(self):
+        if not self._dirty:
+            return
+        tree = ffi.new('git_tree **')
+        if lib.git_tree_lookup(tree, self._repo().pointer, self.oid.pointer):
+            raise error.GitException
+        tree = tree[0]
+
+        manifest = {}
+
+        @ffi.callback('int(const char *, const git_tree_entry *, void *)')
+        def add_tree(root, entry, payload):
+            mode = lib.git_tree_entry_filemode(entry)
+            if mode & lib.GIT_FILEMODE_TREE:
+                return 0
+            manifest[ffi.string(root) + ffi.string(lib.git_tree_entry_name(entry))] = Oid(lib.git_tree_entry_id(entry))
+            return 0
+
+        lib.git_tree_walk(tree, lib.GIT_TREEWALK_PRE, add_tree, ffi.NULL)
+        lib.git_tree_free(tree)
+        self._manifest = manifest
+
+    @property
+    def manifest(self):
+        self.read()
+        return self._manifest
 
 
 class Walker(object):

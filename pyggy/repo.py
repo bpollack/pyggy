@@ -11,6 +11,7 @@ class Repo(object):
     def __init__(self, path):
         self._path = path
         self._repo = None
+        self._walker = None
 
     def __del__(self):
         self.close()
@@ -42,6 +43,8 @@ class Repo(object):
 
     def close(self):
         if self._repo:
+            if self._walker:
+                self._walker.close()
             lib.git_repository_free(self._repo)
             self._repo = None
 
@@ -55,6 +58,12 @@ class Repo(object):
                 raise RepoNotFoundException(self.path)
             raise error.GitException
         self._repo = repo[0]
+
+    @property
+    def walker(self):
+        if self._repo and not self._walker:
+            self._walker = Walker(self)
+        return self._walker
 
     @property
     def path(self):

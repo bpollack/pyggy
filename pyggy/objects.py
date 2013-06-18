@@ -114,3 +114,48 @@ class Commit(object):
 
     def __repr__(self):
         return '<Commit(%s)>' % self.oid
+
+
+class Walker(object):
+    def __init__(self, repo):
+        self._repo = weakref.proxy(repo)
+        self._walker = None
+        self._walking = False
+
+    def close(self):
+        if self._walker:
+            lib.git_revwalk_free(self._walker)
+            self._walker = None
+
+    def open(self, includes=[], excludes=[], limit=None):
+        self._ensure_walker_allocated()
+        lib.git_revwalk_reset(self._walker)
+        if not includes:
+            includes = self._repo.branches().viewvalues()
+        for sha in includes:
+            lib.git_revwalk_push(self._walker, Oid(sha).pointer)
+        for sha in excludes:
+            lib.git_revwalk_hide(self._walker, Oid(sha).pointer)
+        lib.git_revwalk_sorting(self._walker, lib.GIT_SORT_TOPOLOGICAL | lib.GIT_SORT_REVERSE)
+        self._walking = True
+
+    def __iter__(self):
+        if not self._walking:
+            self.open()
+        return self
+
+    def next(self):
+        oid = ffi.new('git_oid *')
+        if lib.git_revwalk_next(oid, self._walker) == lib.GIT_ITEROVER:
+            self._walking = False
+            raise StopIteration
+        return Oid(oid)
+
+    def _ensure_walker_allocated(self):
+        if self._walker:
+            return
+        walker = ffi.new('git_revwalk **')
+        err = lib.git_revwalk_new(walker, self._repo._repo)
+        if err:
+            raise error.GitException
+        self._walker = walker[0]

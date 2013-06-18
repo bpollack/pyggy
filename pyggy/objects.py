@@ -4,7 +4,13 @@ from .core import lib, ffi
 from . import error, util
 
 
-class Oid(object):
+def Oid(sha):
+    if isinstance(sha, _Oid):
+        return sha
+    return _Oid(sha)
+
+
+class _Oid(object):
     def __init__(self, sha):
         if isinstance(sha, basestring):
             self._sha = sha

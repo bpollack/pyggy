@@ -6,7 +6,7 @@ from . import error, util
 
 class Oid(object):
     def __init__(self, sha):
-        if isinstance(sha, str) or isinstance(sha, unicode):
+        if isinstance(sha, basestring):
             self._sha = sha
             self._oid = util.oid(sha)
         else:

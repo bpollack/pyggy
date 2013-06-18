@@ -35,9 +35,7 @@ class Repo(object):
 
     def create(self, bare=False):
         repo = ffi.new('git_repository **')
-        err = lib.git_repository_init(repo, self.path, bare)
-        if err:
-            self._repo = None
+        if lib.git_repository_init(repo, self.path, bare):
             raise error.GitException
         self._repo = repo[0]
 

@@ -46,14 +46,12 @@ class Raw(object):
 
     def read(self):
         odb = ffi.new('git_odb **')
-        err = lib.git_repository_odb(odb, self._repo.pointer)
-        if err:
+        if lib.git_repository_odb(odb, self._repo.pointer):
             raise error.GitException
         odb = odb[0]
         try:
             odb_object = ffi.new('git_odb_object **')
-            err = lib.git_odb_read(odb_object, odb, self.oid.pointer)
-            if err:
+            if lib.git_odb_read(odb_object, odb, self.oid.pointer):
                 raise error.GitException
             odb_object = odb_object[0]
             self.data = ffi.buffer(lib.git_odb_object_data(odb_object), lib.git_odb_object_size(odb_object))[:]
@@ -157,7 +155,6 @@ class Walker(object):
         if self._walker:
             return
         walker = ffi.new('git_revwalk **')
-        err = lib.git_revwalk_new(walker, self._repo._repo)
-        if err:
+        if lib.git_revwalk_new(walker, self._repo._repo):
             raise error.GitException
         self._walker = walker[0]

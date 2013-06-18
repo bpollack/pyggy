@@ -46,13 +46,13 @@ class User(object):
 
 class Raw(object):
     def __init__(self, repo, oid=None):
-        self._repo = weakref.proxy(repo)
+        self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
         self.data = None
 
     def read(self):
         odb = ffi.new('git_odb **')
-        if lib.git_repository_odb(odb, self._repo.pointer):
+        if lib.git_repository_odb(odb, self._repo().pointer):
             raise error.GitException
         odb = odb[0]
         try:
@@ -68,7 +68,7 @@ class Raw(object):
 
 class Commit(object):
     def __init__(self, repo, oid=None):
-        self._repo = weakref.proxy(repo)
+        self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
         self._dirty = True
 
@@ -76,7 +76,7 @@ class Commit(object):
         if not self._dirty:
             return
         commit = ffi.new('git_commit **')
-        err = lib.git_commit_lookup_prefix(commit, self._repo.pointer,
+        err = lib.git_commit_lookup_prefix(commit, self._repo().pointer,
                                            self.oid.pointer, len(self.oid))
         if err:
             if err == lib.GIT_ENOTFOUND:
@@ -124,7 +124,7 @@ class Commit(object):
 
 class Walker(object):
     def __init__(self, repo):
-        self._repo = weakref.proxy(repo)
+        self._repo = weakref.ref(repo)
         self._walker = None
         self._walking = False
 
@@ -137,7 +137,7 @@ class Walker(object):
         self._ensure_walker_allocated()
         lib.git_revwalk_reset(self._walker)
         if not includes:
-            includes = self._repo.branches().viewvalues()
+            includes = self._repo().branches().viewvalues()
         for sha in includes:
             lib.git_revwalk_push(self._walker, Oid(sha).pointer)
         for sha in excludes:
@@ -161,6 +161,6 @@ class Walker(object):
         if self._walker:
             return
         walker = ffi.new('git_revwalk **')
-        if lib.git_revwalk_new(walker, self._repo._repo):
+        if lib.git_revwalk_new(walker, self._repo().pointer):
             raise error.GitException
         self._walker = walker[0]

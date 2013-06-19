@@ -16,6 +16,13 @@ class Repo(object):
     def __del__(self):
         self.close()
 
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
     def branches(self):
         heads = {}
 

@@ -177,9 +177,8 @@ class Tree(object):
 
         lib.git_tree_walk(tree, lib.GIT_TREEWALK_PRE, add_tree, ffi.NULL)
         lib.git_tree_free(tree)
-        for sha, tree in sha_map.viewitems():
-            self._cache[sha] = tree
 
+        self._cache.update(sha_map)
         self._manifest = {}
         self._flatten('', trees, self._manifest)
 

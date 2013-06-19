@@ -13,4 +13,5 @@ setup(name='pyggy',
       ext_package='pyggy',
       ext_modules=[core.ffi.verifier.get_extension()],
       requires=['cffi (==0.6)'],
-      packages=['pyggy'])
+      packages=['pyggy', 'pyggy.headers'],
+      package_data={'pyggy.headers': ['*.h']})

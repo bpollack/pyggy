@@ -12,6 +12,7 @@ class Repo(object):
         self._path = path
         self._repo = None
         self._walker = None
+        self._tree_cache = {}
 
     def __del__(self):
         self.close()

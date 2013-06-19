@@ -1,7 +1,15 @@
+from collections import namedtuple
 import weakref
 
 from .core import lib, ffi
 from . import error, util
+
+
+class _infinitedict(dict):
+    def __getitem__(self, key):
+        if key in self:
+            return self.get(key)
+        return self.setdefault(key, _infinitedict())
 
 
 def Oid(sha):
@@ -126,10 +134,15 @@ class Commit(object):
         return '<Commit(%s)>' % self.oid
 
 
+class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
+    pass
+
+
 class Tree(object):
     def __init__(self, repo, oid):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
+        self._cache = repo._tree_cache
         self._dirty = True
         self._manifest = None
 
@@ -141,24 +154,50 @@ class Tree(object):
             raise error.GitException
         tree = tree[0]
 
-        manifest = {}
+        sha_map = {}
+        trees = _infinitedict()
 
         @ffi.callback('int(const char *, const git_tree_entry *, void *)')
         def add_tree(root, entry, payload):
+            root = ffi.string(root).strip('/')
+            base = trees
+            if root:
+                for directory in root.split('/'):
+                    base = base[directory]
+            name = ffi.string(lib.git_tree_entry_name(entry))
             mode = lib.git_tree_entry_filemode(entry)
+            sha = Oid(lib.git_tree_entry_id(entry)).sha
             if mode & lib.GIT_FILEMODE_TREE:
+                if sha in self._cache:
+                    base[name] = self._cache[sha]
+                    return 1
+                else:
+                    sha_map[sha] = base[name]
+                    return 0
+            else:
+                base[name] = (sha, mode)
                 return 0
-            manifest[ffi.string(root) + ffi.string(lib.git_tree_entry_name(entry))] = Oid(lib.git_tree_entry_id(entry))
-            return 0
 
         lib.git_tree_walk(tree, lib.GIT_TREEWALK_PRE, add_tree, ffi.NULL)
         lib.git_tree_free(tree)
-        self._manifest = manifest
+        for sha, tree in sha_map.viewitems():
+            self._cache[sha] = tree
+
+        self._manifest = {}
+        self._flatten('', trees, self._manifest)
 
     @property
     def manifest(self):
         self.read()
         return self._manifest
+
+    def _flatten(self, base, tree, manifest):
+        for k, v in tree.viewitems():
+            full = k if not base else base + '/' + k
+            if isinstance(v, tuple):
+                manifest[full] = v
+            else:
+                self._flatten(full, v, manifest)
 
 
 class Walker(object):

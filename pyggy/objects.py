@@ -1,15 +1,12 @@
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 import weakref
 
 from .core import lib, ffi
 from . import error, util
 
 
-class _infinitedict(dict):
-    def __getitem__(self, key):
-        if key in self:
-            return self.get(key)
-        return self.setdefault(key, _infinitedict())
+def _infinitedict():
+    return defaultdict(_infinitedict)
 
 
 def Oid(sha):

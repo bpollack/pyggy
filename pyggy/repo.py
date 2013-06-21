@@ -24,6 +24,18 @@ class Repo(object):
     def __exit__(self, type, value, traceback):
         self.close()
 
+    def __getitem__(self, rev):
+        ref = ffi.new('git_reference **')
+        if not lib.git_reference_dwim(ref, self._repo, rev):
+            ref = ref[0]
+            resolved_ref = ffi.new('git_reference **')
+            assert not lib.git_reference_resolve(resolved_ref, ref)
+            resolved_ref = resolved_ref[0]
+            rev = Oid(lib.git_reference_target(resolved_ref)).sha
+            lib.git_reference_free(ref)
+            lib.git_reference_free(resolved_ref)
+        return self.commit(rev)
+
     def branches(self):
         heads = {}
 

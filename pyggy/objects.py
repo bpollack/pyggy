@@ -98,7 +98,7 @@ class Commit(object):
 
         self._parent_ids = []
         for idx in xrange(lib.git_commit_parentcount(commit)):
-            self._parent_ids.append(lib.git_commit_parent_id(commit, idx))
+            self._parent_ids.append(Oid(lib.git_commit_parent_id(commit, idx)).sha)
         self._parents = None
 
         self._tree = Tree(self._repo(), lib.git_commit_tree_id(commit))
@@ -121,6 +121,15 @@ class Commit(object):
     def message(self):
         self.read()
         return self._message
+
+    @property
+    def parent_ids(self):
+        self.read()
+        return self._parent_ids
+
+    @property
+    def sha(self):
+        return self.oid.sha
 
     @property
     def tree(self):

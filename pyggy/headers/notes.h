@@ -1,6 +1,8 @@
 typedef int (*git_note_foreach_cb)(
 	const git_oid *blob_id, const git_oid *annotated_object_id, void *payload);
+
 typedef struct git_iterator git_note_iterator;
+
 int git_note_iterator_new(
 	git_note_iterator **out,
 	git_repository *repo,
@@ -21,6 +23,7 @@ int git_note_read(
 
 const char * git_note_message(const git_note *note);
 const git_oid * git_note_oid(const git_note *note);
+
 int git_note_create(
 	git_oid *out,
 	git_repository *repo,

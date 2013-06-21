@@ -10,6 +10,7 @@ typedef enum {
 	GIT_CHECKOUT_DONT_UPDATE_INDEX = ...,
 	GIT_CHECKOUT_NO_REFRESH = ...,
 	GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = ...,
+	GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES = ...,
 	GIT_CHECKOUT_SKIP_UNMERGED = ...,
 	GIT_CHECKOUT_USE_OURS = ...,
 	GIT_CHECKOUT_USE_THEIRS = ...,
@@ -24,6 +25,7 @@ typedef enum {
 	GIT_CHECKOUT_NOTIFY_UPDATED   = ...,
 	GIT_CHECKOUT_NOTIFY_UNTRACKED = ...,
 	GIT_CHECKOUT_NOTIFY_IGNORED   = ...,
+	GIT_CHECKOUT_NOTIFY_ALL       = ...,
 } git_checkout_notify_t;
 
 typedef int (*git_checkout_notify_cb)(

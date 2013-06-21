@@ -5,12 +5,10 @@ int git_reflog_rename(git_reference *ref, const char *name);
 int git_reflog_delete(git_reference *ref);
 size_t git_reflog_entrycount(git_reflog *reflog);
 const git_reflog_entry * git_reflog_entry_byindex(git_reflog *reflog, size_t idx);
-
 int git_reflog_drop(
 	git_reflog *reflog,
 	size_t idx,
 	int rewrite_previous_entry);
-
 const git_oid * git_reflog_entry_id_old(const git_reflog_entry *entry);
 const git_oid * git_reflog_entry_id_new(const git_reflog_entry *entry);
 const git_signature * git_reflog_entry_committer(const git_reflog_entry *entry);

@@ -1,10 +1,9 @@
-static char *const GIT_DEFAULT_PORT;
+#define GIT_DEFAULT_PORT ...
 
 typedef enum {
 	GIT_DIRECTION_FETCH = ...,
 	GIT_DIRECTION_PUSH  = ...,
 } git_direction;
-
 
 struct git_remote_head {
 	int local;

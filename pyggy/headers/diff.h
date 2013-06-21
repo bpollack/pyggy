@@ -19,6 +19,8 @@ typedef enum {
 	GIT_DIFF_INCLUDE_TYPECHANGE_TREES  = ...,
 	GIT_DIFF_IGNORE_FILEMODE = ...,
 	GIT_DIFF_RECURSE_IGNORED_DIRS = ...,
+	GIT_DIFF_FAST_UNTRACKED_DIRS = ...,
+	GIT_DIFF_FORCE_BINARY = ...,
 } git_diff_option_t;
 
 typedef struct git_diff_list git_diff_list;
@@ -101,6 +103,7 @@ typedef enum {
 	GIT_DIFF_LINE_CONTEXT   = ...,
 	GIT_DIFF_LINE_ADDITION  = ...,
 	GIT_DIFF_LINE_DELETION  = ...,
+	GIT_DIFF_LINE_CONTEXT_EOFNL = ...,
 	GIT_DIFF_LINE_ADD_EOFNL = ...,
 	GIT_DIFF_LINE_DEL_EOFNL = ...,
 	GIT_DIFF_LINE_FILE_HDR  = ...,
@@ -123,11 +126,15 @@ typedef enum {
 	GIT_DIFF_FIND_RENAMES_FROM_REWRITES = ...,
 	GIT_DIFF_FIND_COPIES = ...,
 	GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED = ...,
+	GIT_DIFF_FIND_REWRITES = ...,
+	GIT_DIFF_BREAK_REWRITES = ...,
 	GIT_DIFF_FIND_AND_BREAK_REWRITES = ...,
+	GIT_DIFF_FIND_FOR_UNTRACKED = ...,
 	GIT_DIFF_FIND_ALL = ...,
 	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = ...,
 	GIT_DIFF_FIND_IGNORE_WHITESPACE = ...,
 	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = ...,
+	GIT_DIFF_FIND_EXACT_MATCH_ONLY = ...,
 } git_diff_find_t;
 
 typedef struct {
@@ -144,12 +151,12 @@ typedef struct {
 
 typedef struct {
 	unsigned int version;
-	unsigned int flags;
-	unsigned int rename_threshold;
-	unsigned int rename_from_rewrite_threshold;
-	unsigned int copy_threshold;
-	unsigned int break_rewrite_threshold;
-	unsigned int target_limit;
+	uint32_t flags;
+	uint16_t rename_threshold;
+	uint16_t rename_from_rewrite_threshold;
+	uint16_t copy_threshold;
+	uint16_t break_rewrite_threshold;
+	size_t rename_limit;
 	git_diff_similarity_metric *metric;
 } git_diff_find_options;
 
@@ -162,26 +169,26 @@ int git_diff_tree_to_tree(
 	git_repository *repo,
 	git_tree *old_tree,
 	git_tree *new_tree,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);
 
 int git_diff_tree_to_index(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
 	git_index *index,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);
 
 int git_diff_index_to_workdir(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_index *index,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);
 
 int git_diff_tree_to_workdir(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);
 
 int git_diff_merge(
 	git_diff_list *onto,
@@ -199,6 +206,11 @@ int git_diff_foreach(
 	void *payload);
 
 int git_diff_print_compact(
+	git_diff_list *diff,
+	git_diff_data_cb print_cb,
+	void *payload);
+
+int git_diff_print_raw(
 	git_diff_list *diff,
 	git_diff_data_cb print_cb,
 	void *payload);
@@ -270,19 +282,40 @@ int git_diff_patch_to_str(
 
 int git_diff_blobs(
 	const git_blob *old_blob,
+	const char *old_as_path,
 	const git_blob *new_blob,
+	const char *new_as_path,
 	const git_diff_options *options,
 	git_diff_file_cb file_cb,
 	git_diff_hunk_cb hunk_cb,
 	git_diff_data_cb line_cb,
 	void *payload);
 
+int git_diff_patch_from_blobs(
+	git_diff_patch **out,
+	const git_blob *old_blob,
+	const char *old_as_path,
+	const git_blob *new_blob,
+	const char *new_as_path,
+	const git_diff_options *opts);
+
 int git_diff_blob_to_buffer(
 	const git_blob *old_blob,
+	const char *old_as_path,
 	const char *buffer,
 	size_t buffer_len,
+	const char *buffer_as_path,
 	const git_diff_options *options,
 	git_diff_file_cb file_cb,
 	git_diff_hunk_cb hunk_cb,
 	git_diff_data_cb data_cb,
 	void *payload);
+
+int git_diff_patch_from_blob_and_buffer(
+	git_diff_patch **out,
+	const git_blob *old_blob,
+	const char *old_as_path,
+	const char *buffer,
+	size_t buffer_len,
+	const char *buffer_as_path,
+	const git_diff_options *opts);

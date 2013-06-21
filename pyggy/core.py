@@ -1,4 +1,4 @@
-from os import path
+import os
 
 from cffi import FFI
 
@@ -55,10 +55,18 @@ defs = '\n'.join([
 ])
 ffi.cdef(defs)
 
-__base = path.abspath(path.join(path.dirname(__file__), '..', 'libgit2'))
-print 'BASE: %s' % __base
+__args = {}
+__includes = os.getenv('PYGGY_INCLUDES')
+__libraries = os.getenv('PYGGY_LIBRARIES')
+__module = os.getenv('PYGGY_MODULE_NAME')
+if __includes:
+    __args['include_dirs'] = __includes.split(':')
+if __libraries:
+    __args['library_dirs'] = __libraries.split(':')
+if __module:
+    __args['modulename'] = __module
+
 lib = ffi.verify("#include <git2.h>",
                  libraries=['git2'],
-                 library_dirs=[path.join(__base, 'build')],
-                 include_dirs=[path.join(__base, 'include')],
-                 ext_package='pyggy')
+                 ext_package='pyggy',
+                 **__args)

@@ -18,8 +18,8 @@ def Oid(sha):
 class _Oid(object):
     def __init__(self, sha):
         if isinstance(sha, basestring):
-            self._sha = sha
-            self._oid = util.oid(sha)
+            self._sha = str(sha)
+            self._oid = util.oid(self._sha)
         else:
             self._sha = util.sha(sha)
             self._oid = sha

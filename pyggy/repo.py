@@ -26,6 +26,8 @@ class Repo(object):
 
     def __getitem__(self, rev):
         ref = ffi.new('git_reference **')
+        if not isinstance(rev, basestring):
+            rev = rev.sha
         if not lib.git_reference_dwim(ref, self._repo, rev):
             ref = ref[0]
             resolved_ref = ffi.new('git_reference **')

@@ -9,7 +9,7 @@ class RepoNotFoundException(error.GitException):
 
 class Repo(object):
     def __init__(self, path):
-        self._path = path
+        self._path = path.encode('utf8') if isinstance(path, unicode) else path
         self._repo = None
         self._walker = None
         self._tree_cache = {}

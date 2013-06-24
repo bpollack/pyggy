@@ -26,7 +26,9 @@ class Repo(object):
 
     def __getitem__(self, rev):
         ref = ffi.new('git_reference **')
-        if not isinstance(rev, basestring):
+        if isinstance(rev, unicode):
+            rev = rev.encode('utf8')
+        if not isinstance(rev, str):
             rev = rev.sha
         if not lib.git_reference_dwim(ref, self._repo, rev):
             ref = ref[0]

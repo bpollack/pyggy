@@ -56,6 +56,7 @@ typedef struct git_checkout_opts {
 	void *progress_payload;
 	git_strarray paths;
 	git_tree *baseline;
+	const char *target_directory;
 } git_checkout_opts;
 
 #define GIT_CHECKOUT_OPTS_VERSION ...

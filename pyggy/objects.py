@@ -216,16 +216,16 @@ class Walker(object):
             lib.git_revwalk_free(self._walker)
             self._walker = None
 
-    def open(self, includes=[], excludes=[], limit=None):
+    def open(self, include=[], exclude=[], limit=None):
         self._ensure_walker_allocated()
         lib.git_revwalk_reset(self._walker)
-        if not includes:
-            includes = self._repo().branches().viewvalues()
-        for sha in includes:
-            lib.git_revwalk_push(self._walker, Oid(sha).pointer)
-        for sha in excludes:
-            lib.git_revwalk_hide(self._walker, Oid(sha).pointer)
-        lib.git_revwalk_sorting(self._walker, lib.GIT_SORT_TOPOLOGICAL | lib.GIT_SORT_REVERSE)
+        if not include:
+            include = self._repo().branches().viewvalues()
+        for sha in include:
+            lib.git_revwalk_push(self._walker, Oid(str(sha)).pointer)
+        for sha in exclude:
+            lib.git_revwalk_hide(self._walker, Oid(str(sha)).pointer)
+        lib.git_revwalk_sorting(self._walker, lib.GIT_SORT_TOPOLOGICAL)
         self._walking = True
 
     def __iter__(self):

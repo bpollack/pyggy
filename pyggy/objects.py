@@ -210,6 +210,7 @@ class Walker(object):
         self._repo = weakref.ref(repo)
         self._walker = None
         self._walking = False
+        self._limit = None
 
     def close(self):
         if self._walker:
@@ -226,18 +227,22 @@ class Walker(object):
         for sha in exclude:
             lib.git_revwalk_hide(self._walker, Oid(str(sha)).pointer)
         lib.git_revwalk_sorting(self._walker, lib.GIT_SORT_TOPOLOGICAL)
+        self._limit = limit
         self._walking = True
 
     def __iter__(self):
         if not self._walking:
             self.open()
+            self._remaining = self._limit
         return self
 
     def next(self):
         oid = ffi.new('git_oid *')
-        if lib.git_revwalk_next(oid, self._walker) == lib.GIT_ITEROVER:
+        if self._remaining == 0 or lib.git_revwalk_next(oid, self._walker) == lib.GIT_ITEROVER:
             self._walking = False
             raise StopIteration
+        if self._remaining is not None:
+            self._remaining -= 1
         return Oid(oid)
 
     def _ensure_walker_allocated(self):

@@ -81,6 +81,17 @@ class Repo(object):
             raise error.GitException
         self._repo = repo[0]
 
+    def tags(self):
+        shas = {}
+
+        @ffi.callback('int(char *, git_oid *, void *)')
+        def add_tag(name, oid, payload):
+            shas[ffi.string(name)] = Oid(oid).sha
+            return 0
+
+        lib.git_tag_foreach(self._repo, add_tag, ffi.NULL)
+        return shas
+
     @property
     def walker(self):
         if self._repo and not self._walker:

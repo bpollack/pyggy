@@ -1,4 +1,3 @@
-import os
 from os.path import join as pathjoin
 
 from .core import lib, ffi

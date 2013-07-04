@@ -58,6 +58,13 @@ class Repo(object):
         lib.git_odb_add_disk_alternate(odb, path)
         lib.git_odb_free(odb)
 
+    def get_alternates(self):
+        try:
+            with open(pathjoin(self.odb_path, 'info', 'alternates'), 'rb') as f:
+                return [l.strip() for l in f if l and not l.startswith('#')]
+        except IOError:
+            return []
+
     def branches(self):
         heads = {}
 

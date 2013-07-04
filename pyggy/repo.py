@@ -110,6 +110,22 @@ class Repo(object):
             raise error.GitException
         self._repo = repo[0]
 
+    def pull(self, url):
+        remote = ffi.new('git_remote **')
+        if lib.git_remote_create_inmemory(remote, self._repo, 'refs/*:refs/*', url):
+            raise error.GitException
+        remote = remote[0]
+        try:
+            lib.git_remote_set_update_fetchhead(remote, 0)
+            if (lib.git_remote_connect(remote, lib.GIT_DIRECTION_FETCH) or
+                    lib.git_remote_download(remote, ffi.NULL, ffi.NULL) or
+                    lib.git_remote_update_tips(remote)):
+                raise error.GitException
+        finally:
+            if lib.git_remote_connected(remote):
+                lib.git_remote_disconnect(remote)
+            lib.git_remote_free(remote)
+
     @property
     def tags(self):
         return ReferenceDb(self, 'refs/tags/')

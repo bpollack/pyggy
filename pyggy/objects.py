@@ -1,4 +1,4 @@
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, MutableMapping
 import weakref
 
 from .core import lib, ffi
@@ -140,14 +140,62 @@ class Commit(object):
         return '<Commit(%s)>' % self.oid
 
 
-class ReferenceDb(object):
+class ReferenceDb(MutableMapping):
     def __init__(self, repo, prefix):
         self._repo = weakref.ref(repo)
         self._prefix = prefix
         if self._prefix[-1] != '/':
             self._prefix += '/'
 
+    # Mapping
     def __iter__(self):
+        for k, v in self.iteritems():
+            yield k
+
+    def __getitem__(self, name):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name):
+            raise error.GitException
+        raw = ref[0]
+        try:
+            ref = ffi.new('git_reference **')
+            if lib.git_reference_resolve(ref, raw):
+                raise error.GitException
+            resolved = ref[0]
+            target = Oid(lib.git_reference_target(resolved)).sha
+            lib.git_reference_free(resolved)
+            return target
+        finally:
+            lib.git_reference_free(raw)
+
+    def __len__(self):
+        # Seriously, don't call this method; it's stupid, but required for collections.Mapping
+        return len(list(iter(self)))
+
+    # MutableMapping
+    def __setitem__(self, name, sha):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_create(ref, self._repo().pointer, self._prefix + name, Oid(sha).oid, 0):
+            raise error.GitException
+        else:
+            lib.git_reference_free(ref[0])
+
+    def __delitem__(self, name):
+        ref = ffi.new('git_reference **')
+        err = lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name)
+        if err:
+            if err == lib.ENOTFOUND:
+                raise KeyError
+            raise error.GitException
+        ref = ref[0]
+        try:
+            if lib.git_reference_delete(ref):
+                raise error.GitException
+        finally:
+            lib.git_reference_free(ref)
+
+    # Auxiliary
+    def iteritems(self):
         iterator = ffi.new('git_reference_iterator **')
         glob = self._prefix + '*'
         if lib.git_reference_iterator_glob_new(iterator, self._repo().pointer, glob):
@@ -171,29 +219,6 @@ class ReferenceDb(object):
                 lib.git_reference_free(resolved)
         finally:
             lib.git_reference_iterator_free(iterator)
-
-    def __getitem__(self, name):
-        ref = ffi.new('git_reference **')
-        if lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name):
-            raise error.GitException
-        raw = ref[0]
-        try:
-            ref = ffi.new('git_reference **')
-            if lib.git_reference_resolve(ref, raw):
-                raise error.GitException
-            resolved = ref[0]
-            target = Oid(lib.git_reference_target(resolved)).sha
-            lib.git_reference_free(resolved)
-            return target
-        finally:
-            lib.git_reference_free(raw)
-
-    def __setitem__(self, name, sha):
-        ref = ffi.new('git_reference **')
-        if lib.git_reference_create(ref, self._repo().pointer, self._prefix + name, Oid(sha).oid, 0):
-            raise error.GitException
-        else:
-            lib.git_reference_free(ref[0])
 
 
 class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):

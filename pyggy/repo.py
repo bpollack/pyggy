@@ -1,3 +1,6 @@
+import os
+from os.path import join as pathjoin
+
 from .core import lib, ffi
 from .objects import Commit, Oid, Raw, Walker
 from . import error
@@ -39,6 +42,26 @@ class Repo(object):
             lib.git_reference_free(ref)
             lib.git_reference_free(resolved_ref)
         return self.commit(rev)
+
+    def add_alternate(self, path):
+        if lib.git_repository_is_bare(self._repo):
+            objects_path = pathjoin(self.path, 'objects')
+        else:
+            objects_path = pathjoin(self.path, '.git', 'objects')
+        with open(pathjoin(objects_path, 'info', 'alternates'), 'ab+') as alternates:
+            if alternates.tell() > 0:
+                alternates.seek(-1)
+                last = alternates.read(1)
+                if last != '\n':
+                    alternates.write('\n')
+            alternates.write(path)
+            alternates.write('\n')
+        odb = ffi.new('git_odb **')
+        if lib.git_repository_odb(odb, self._repo):
+            raise error.GitException
+        odb = odb[0]
+        lib.git_odb_add_disk_alternate(odb, path)
+        lib.git_odb_free(odb)
 
     def branches(self):
         heads = {}

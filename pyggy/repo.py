@@ -65,13 +65,6 @@ class Repo(object):
         except IOError:
             return []
 
-    def _add_reference(self, name, sha):
-        ref = ffi.new('git_reference **')
-        if lib.git_reference_create(ref, self._repo, name, Oid(sha).oid, 0):
-            raise error.GitException
-        else:
-            lib.git_reference_free(ref[0])
-
     def _add_symbolic_reference(self, name, target):
         ref = ffi.new('git_reference **')
         if lib.git_reference_symbolic_create(ref, self._repo, name, target, 0):

@@ -120,6 +120,10 @@ class Repo(object):
             lib.git_remote_free(remote)
 
     @property
+    def head(self):
+        return self['HEAD'].oid.sha
+
+    @property
     def tags(self):
         return ReferenceDb(self, 'refs/tags/')
 

@@ -1,7 +1,7 @@
 from os.path import join as pathjoin
 
 from .core import lib, ffi
-from .objects import Commit, Oid, Raw, Walker
+from .objects import Commit, Oid, Raw, ReferenceDb, Walker
 from . import error
 
 
@@ -65,19 +65,23 @@ class Repo(object):
         except IOError:
             return []
 
+    def _add_reference(self, name, sha):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_create(ref, self._repo, name, Oid(sha).oid, 0):
+            raise error.GitException
+        else:
+            lib.git_reference_free(ref[0])
+
+    def _add_symbolic_reference(self, name, target):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_symbolic_create(ref, self._repo, name, target, 0):
+            raise error.GitException
+        else:
+            lib.git_reference_free(ref[0])
+
+    @property
     def branches(self):
-        heads = {}
-
-        @ffi.callback('int(char *, git_branch_t, void *)')
-        def add_branch(name, type, payload):
-            oid = ffi.new('git_oid *')
-            name = ffi.string(name)
-            if not lib.git_reference_name_to_id(oid, self._repo, 'refs/heads/' + name):
-                heads[name] = Oid(oid).sha
-            return 0
-
-        lib.git_branch_foreach(self._repo, lib.GIT_BRANCH_LOCAL, add_branch, ffi.NULL)
-        return heads
+        return ReferenceDb(self, 'refs/heads/')
 
     def commit(self, oid):
         return Commit(self, oid)
@@ -106,16 +110,9 @@ class Repo(object):
             raise error.GitException
         self._repo = repo[0]
 
+    @property
     def tags(self):
-        shas = {}
-
-        @ffi.callback('int(char *, git_oid *, void *)')
-        def add_tag(name, oid, payload):
-            shas[ffi.string(name)] = Oid(oid).sha
-            return 0
-
-        lib.git_tag_foreach(self._repo, add_tag, ffi.NULL)
-        return shas
+        return ReferenceDb(self, 'refs/tags/')
 
     @property
     def odb_path(self):

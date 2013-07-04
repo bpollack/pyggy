@@ -140,6 +140,62 @@ class Commit(object):
         return '<Commit(%s)>' % self.oid
 
 
+class ReferenceDb(object):
+    def __init__(self, repo, prefix):
+        self._repo = weakref.ref(repo)
+        self._prefix = prefix
+        if self._prefix[-1] != '/':
+            self._prefix += '/'
+
+    def __iter__(self):
+        iterator = ffi.new('git_reference_iterator **')
+        glob = self._prefix + '*'
+        if lib.git_reference_iterator_glob_new(iterator, self._repo().pointer, glob):
+            raise error.GitException
+        iterator = iterator[0]
+        try:
+            while True:
+                ref = ffi.new('git_reference **')
+                if lib.git_reference_next(ref, iterator) == lib.GIT_ITEROVER:
+                    raise StopIteration
+                original = ref[0]
+                name = ffi.string(lib.git_reference_name(original))
+
+                ref = ffi.new('git_reference **')
+                if lib.git_reference_resolve(ref, original):
+                    raise error.GitException
+                resolved = ref[0]
+                target = Oid(lib.git_reference_target(resolved)).sha
+
+                yield name, target
+                lib.git_reference_free(resolved)
+        finally:
+            lib.git_reference_iterator_free(iterator)
+
+    def __getitem__(self, name):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name):
+            raise error.GitException
+        raw = ref[0]
+        try:
+            ref = ffi.new('git_reference **')
+            if lib.git_reference_resolve(ref, raw):
+                raise error.GitException
+            resolved = ref[0]
+            target = Oid(lib.git_reference_target(resolved)).sha
+            lib.git_reference_free(resolved)
+            return target
+        finally:
+            lib.git_reference_free(raw)
+
+    def __setitem__(self, name, sha):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_create(ref, self._repo().pointer, self._prefix + name, Oid(sha).oid, 0):
+            raise error.GitException
+        else:
+            lib.git_reference_free(ref[0])
+
+
 class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
     pass
 

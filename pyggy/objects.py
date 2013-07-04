@@ -154,7 +154,8 @@ class ReferenceDb(MutableMapping):
 
     def __getitem__(self, name):
         ref = ffi.new('git_reference **')
-        if lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name):
+        assert name.startswith(self._prefix)
+        if lib.git_reference_lookup(ref, self._repo().pointer, name):
             raise error.GitException
         raw = ref[0]
         try:

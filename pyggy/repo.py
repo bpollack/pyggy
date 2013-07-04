@@ -43,11 +43,7 @@ class Repo(object):
         return self.commit(rev)
 
     def add_alternate(self, path):
-        if lib.git_repository_is_bare(self._repo):
-            objects_path = pathjoin(self.path, 'objects')
-        else:
-            objects_path = pathjoin(self.path, '.git', 'objects')
-        with open(pathjoin(objects_path, 'info', 'alternates'), 'ab+') as alternates:
+        with open(pathjoin(self.odb_path, 'info', 'alternates'), 'ab+') as alternates:
             if alternates.tell() > 0:
                 alternates.seek(-1)
                 last = alternates.read(1)
@@ -113,6 +109,13 @@ class Repo(object):
 
         lib.git_tag_foreach(self._repo, add_tag, ffi.NULL)
         return shas
+
+    @property
+    def odb_path(self):
+        if lib.git_repository_is_bare(self._repo):
+            return pathjoin(self.path, 'objects')
+        else:
+            return pathjoin(self.path, '.git', 'objects')
 
     @property
     def walker(self):

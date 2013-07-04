@@ -85,7 +85,7 @@ class Commit(object):
                                            self.oid.pointer, len(self.oid))
         if err:
             if err == lib.GIT_ENOTFOUND:
-                raise KeyError
+                raise KeyError(self.oid.sha)
             raise error.GitException
         commit = commit[0]
 
@@ -185,7 +185,7 @@ class ReferenceDb(MutableMapping):
         err = lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name)
         if err:
             if err == lib.ENOTFOUND:
-                raise KeyError
+                raise KeyError(name)
             raise error.GitException
         ref = ref[0]
         try:

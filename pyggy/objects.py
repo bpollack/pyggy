@@ -313,11 +313,11 @@ class Walker(object):
         lib.git_revwalk_sorting(self._walker, lib.GIT_SORT_TOPOLOGICAL)
         self._limit = limit
         self._walking = True
+        self._remaining = self._limit
 
     def __iter__(self):
         if not self._walking:
             self.open()
-            self._remaining = self._limit
         return self
 
     def next(self):

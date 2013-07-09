@@ -10,6 +10,7 @@ def _infinitedict():
 
 
 def Oid(sha):
+    """convenience wrapper to allow calling Oid(an_oid)"""
     if isinstance(sha, _Oid):
         return sha
     return _Oid(sha)
@@ -40,6 +41,7 @@ class _Oid(object):
 
 
 class User(object):
+    """represents a parsed Git user"""
     def __init__(self, git_signature):
         self.name = ffi.string(git_signature.name)
         self.email = ffi.string(git_signature.email)
@@ -50,6 +52,10 @@ class User(object):
 
 
 class Raw(object):
+    """represents a completely unparsed raw object from the ODB
+
+    This class is extremely likely to radically change in a near-future
+    release."""
     def __init__(self, repo, oid=None):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
@@ -72,6 +78,14 @@ class Raw(object):
 
 
 class Commit(object):
+    """represents a Git commit
+
+    This object loads lazily, so it is (relatively) safe to hold onto
+    several thousand of them at once, as long as you haven't fully
+    reified them.  On the flip side, this means that, like all Pyggy
+    objects, you cannot keep Commit objects around after you have
+    called Repo.close.
+    """
     def __init__(self, repo, oid=None, load=True):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
@@ -143,6 +157,15 @@ class Commit(object):
 
 
 class ReferenceDb(MutableMapping):
+    """manages a Git refstore
+
+    Each ReferenceDb only manages a prefix of the Git reference
+    namespace.  While it'd be possible to create a ReferenceDb for
+    the empty string, and therefore to manage all refs through it,
+    pyggy encourages you (and does internally) use separate
+    ReferenceDbs for different name spaces to avoid inadvertantly
+    creating tags when you wanted to create a branch and vice-versa.
+    """
     def __init__(self, repo, prefix):
         self._repo = weakref.ref(repo)
         self._prefix = prefix

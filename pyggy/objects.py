@@ -72,10 +72,12 @@ class Raw(object):
 
 
 class Commit(object):
-    def __init__(self, repo, oid=None):
+    def __init__(self, repo, oid=None, load=True):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
         self._dirty = True
+        if load:
+            self.read()
 
     def read(self):
         if not self._dirty:

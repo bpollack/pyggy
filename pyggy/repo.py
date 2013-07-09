@@ -62,13 +62,6 @@ class Repo(object):
         except IOError:
             return []
 
-    def _add_symbolic_reference(self, name, target):
-        ref = ffi.new('git_reference **')
-        if lib.git_reference_symbolic_create(ref, self._repo, name, target, 0):
-            raise error.GitException
-        else:
-            lib.git_reference_free(ref[0])
-
     @property
     def branches(self):
         return ReferenceDb(self, 'refs/heads/')
@@ -119,6 +112,13 @@ class Repo(object):
     @property
     def head(self):
         return self['HEAD'].oid.sha
+
+    @head.setter
+    def head(self, branch):
+        ref = ffi.new('git_reference **')
+        if lib.git_reference_symbolic_create(ref, self._repo, 'HEAD', branch, 1):
+            raise error.GitException
+        lib.git_reference_free(ref[0])
 
     @property
     def tags(self):

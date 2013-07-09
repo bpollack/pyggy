@@ -1,12 +1,15 @@
 from os.path import join as pathjoin
 
 from .core import lib, ffi
-from .objects import Commit, Oid, Raw, ReferenceDb, Walker
+from .objects import Commit, Oid, _Oid, Raw, ReferenceDb, Walker
 from . import error
 
 
 class RepoNotFoundException(error.GitException):
     pass
+
+
+_HEX = frozenset(c for c in 'abcdef0123456789')
 
 
 class Repo(object):
@@ -26,21 +29,15 @@ class Repo(object):
     def __exit__(self, type, value, traceback):
         self.close()
 
+    def __contains__(self, rev):
+        try:
+            self[rev]
+            return True
+        except KeyError:
+            return False
+
     def __getitem__(self, rev):
-        ref = ffi.new('git_reference **')
-        if isinstance(rev, unicode):
-            rev = rev.encode('utf8')
-        if not isinstance(rev, str):
-            rev = rev.sha
-        if not lib.git_reference_dwim(ref, self._repo, rev):
-            ref = ref[0]
-            resolved_ref = ffi.new('git_reference **')
-            assert not lib.git_reference_resolve(resolved_ref, ref)
-            resolved_ref = resolved_ref[0]
-            rev = Oid(lib.git_reference_target(resolved_ref)).sha
-            lib.git_reference_free(ref)
-            lib.git_reference_free(resolved_ref)
-        return self.commit(rev)
+        return self.commit(self._resolve_rev(rev))
 
     def add_alternate(self, path):
         with open(pathjoin(self.odb_path, 'info', 'alternates'), 'ab+') as alternates:
@@ -150,3 +147,31 @@ class Repo(object):
     @property
     def pointer(self):
         return self._repo
+
+    def _resolve_rev(self, rev):
+        if isinstance(rev, unicode):
+            rev = rev.encode('utf8')
+
+        # If what you've got looks like a SHA,
+        # we're gonna take it as a SHA
+        if isinstance(rev, _Oid) or (
+                isinstance(rev, str) and
+                len(rev) >= lib.GIT_OID_MINPREFIXLEN and
+                all(c in _HEX for c in rev)):
+            return rev
+        ref = ffi.new('git_reference **')
+        err = lib.git_reference_dwim(ref, self._repo, rev)
+        if err:
+            if err == lib.GIT_ENOTFOUND:
+                raise KeyError(rev)
+            raise error.GitException
+
+        ref = ref[0]
+        resolved_ref = ffi.new('git_reference **')
+        if lib.git_reference_resolve(resolved_ref, ref):
+            raise error.GitException
+        resolved_ref = resolved_ref[0]
+        rev = Oid(lib.git_reference_target(resolved_ref)).sha
+        lib.git_reference_free(ref)
+        lib.git_reference_free(resolved_ref)
+        return rev

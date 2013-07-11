@@ -170,6 +170,19 @@ class Repo(object):
                     lib.git_remote_download(remote, ffi.NULL, ffi.NULL) or
                     lib.git_remote_update_tips(remote)):
                 raise error.GitException
+
+            # prune no-longer-existent stuff
+            existing_branches = set(self.branches)
+            remote_branches = set()
+
+            @ffi.callback('int(git_remote_head *, void *)')
+            def add_remote_branch(remote_head, payload):
+                remote_branches.add(ffi.string(remote_head.name))
+                return 0
+
+            lib.git_remote_ls(remote, add_remote_branch, ffi.NULL)
+            for branch in existing_branches - remote_branches:
+                del self.branches[branch]
         finally:
             if lib.git_remote_connected(remote):
                 lib.git_remote_disconnect(remote)

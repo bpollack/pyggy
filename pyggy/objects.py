@@ -343,6 +343,10 @@ class Tree(object):
         self.read()
         return self._manifest
 
+    @property
+    def sha(self):
+        return self.oid.sha
+
     def _flatten(self, base, tree, manifest):
         for k, v in tree.viewitems():
             full = k if not base else base + '/' + k

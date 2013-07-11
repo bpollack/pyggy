@@ -232,8 +232,8 @@ class ReferenceDb(MutableMapping):
             yield k
 
     def __getitem__(self, name):
-        ref = ffi.new('git_reference **')
         assert name.startswith(self._prefix)
+        ref = ffi.new('git_reference **')
         if lib.git_reference_lookup(ref, self._repo().pointer, name):
             raise error.GitException
         raw = ref[0]
@@ -254,17 +254,19 @@ class ReferenceDb(MutableMapping):
 
     # MutableMapping
     def __setitem__(self, name, sha):
+        assert name.startswith(self._prefix)
         if not _valid_ref_name(name):
             raise ValueError("invalid ref name: {0}".format(name))
         ref = ffi.new('git_reference **')
-        if lib.git_reference_create(ref, self._repo().pointer, self._prefix + name, Oid(sha).oid, 0):
+        if lib.git_reference_create(ref, self._repo().pointer, name, Oid(sha).pointer, 1):
             raise error.GitException
         else:
             lib.git_reference_free(ref[0])
 
     def __delitem__(self, name):
+        assert name.startswith(self._prefix)
         ref = ffi.new('git_reference **')
-        err = lib.git_reference_lookup(ref, self._repo().pointer, self._prefix + name)
+        err = lib.git_reference_lookup(ref, self._repo().pointer, name)
         if err:
             if err == lib.ENOTFOUND:
                 raise KeyError(name)

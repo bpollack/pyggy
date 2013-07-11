@@ -94,8 +94,17 @@ class Commit(object):
             self.read()
 
     def read(self):
-        if not self._dirty:
+        """loads the actual commit data into this object
+
+        You almost never need to call this method; the commit
+        will load its data if it needs to when you access its
+        properties.
+        """
+
+        # Abort if we're not dirty or not a real commit
+        if not self._dirty or self.oid is None:
             return
+
         commit = ffi.new('git_commit **')
         err = lib.git_commit_lookup_prefix(commit, self._repo().pointer,
                                            self.oid.pointer, len(self.oid))

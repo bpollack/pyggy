@@ -125,30 +125,61 @@ class Commit(object):
 
     @property
     def author(self):
+        """return a User object representing this commit's author"""
         self.read()
         return self._author
 
     @property
     def committer(self):
+        """return a User object representing this commit's committer"""
         self.read()
         return self._committer
 
     @property
     def message(self):
+        """return the lossy unicode representing this commit message"""
         self.read()
         return self._message
 
     @property
+    def parents(self):
+        """return the full parent objects for this commit
+
+        If you do not need full parent commit objects, consider using
+        parent_ids instead.
+        """
+        self.read()
+        if self._parents is None:
+            self._parents = [self._repo().commit(sha) for sha in self._parent_ids]
+        return self._parents
+
+    @property
     def parent_ids(self):
+        """return the list of parent IDs
+
+        These are not full-fledge parent objects; you'll need to reify them
+        using the appropriate repository if you want the full data, or you'll
+        need to use the parents property instead."""
         self.read()
         return self._parent_ids
 
     @property
     def sha(self):
+        """return the string SHA for this commit
+
+        This is a convenience function that simply wraps calling .oid.sha.
+        """
         return self.oid.sha
 
     @property
     def tree(self):
+        """return the tree that corresponds to this commit
+
+        The tree (and its subtrees) will not actually be fully realized
+        until you begin working ith its methods.  If you want it to
+        be loaded immediately, call .read() on the Tree you receive
+        from this method immediately afterwards.
+        """
         self.read()
         return self._tree
 

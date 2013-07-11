@@ -9,6 +9,20 @@ def _infinitedict():
     return defaultdict(_infinitedict)
 
 
+def _valid_ref_name(name):
+    if name[0] == '/' or name[-1] == '/' or name[-1] == '.':
+        return False
+    if name.count('/') != 2:
+        return False
+    if not all(40 < ord(c) < 176 for c in name):
+        return False
+    if any(reject in name
+           for reject
+           in ['/.', '//', '?', '*', '[', '..', '\\', '^', '*', '@{', '~', '.lock']):
+        return False
+    return True
+
+
 def Oid(sha):
     """convenience wrapper to allow calling Oid(an_oid)"""
     if isinstance(sha, _Oid):
@@ -240,6 +254,8 @@ class ReferenceDb(MutableMapping):
 
     # MutableMapping
     def __setitem__(self, name, sha):
+        if not _valid_ref_name(name):
+            raise ValueError("invalid ref name: {0}".format(name))
         ref = ffi.new('git_reference **')
         if lib.git_reference_create(ref, self._repo().pointer, self._prefix + name, Oid(sha).oid, 0):
             raise error.GitException

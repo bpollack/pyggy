@@ -137,6 +137,10 @@ class Commit(object):
         if load:
             self.read()
 
+    def __contains__(self, name):
+        self.read()
+        return name in self.tree
+
     def __getitem__(self, name):
         self.read()
         return self.tree[name]
@@ -350,6 +354,9 @@ class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
         super(TreeEntry, self).__init__(*args, **kwargs)
         self.children = kwargs.get('children', defaultdict(TreeEntry))
 
+    def __contains__(self, name):
+        return name in self.children
+
     @property
     def is_directory(self):
         return self.mode & lib.GIT_FILEMODE_TREE
@@ -362,6 +369,10 @@ class Tree(object):
         self._dirty = True
         self._entries = None
         self._manifest = None
+
+    def __contains__(self, name):
+        self.read()
+        return name in self._manifest
 
     def __getitem__(self, name):
         self.read()
@@ -409,10 +420,15 @@ class Tree(object):
         lib.git_tree_free(tree)
 
         cache.update(sha_map)
-        self._entries = trees.children.items()
+        self._entries = trees.children
         self._manifest = {}
         self._flatten('', trees, self._manifest)
         self._dirty = False
+
+    @property
+    def children(self):
+        """convenience wrapper of children so that Trees look like TreeEntries"""
+        return self.entries
 
     @property
     def entries(self):

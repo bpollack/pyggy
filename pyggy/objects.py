@@ -306,7 +306,13 @@ class ReferenceDb(MutableMapping):
 
 
 class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
-    pass
+    def __init__(self, *args, **kwargs):
+        super(TreeEntry, self).__init__(*args, **kwargs)
+        self.children = kwargs.get('children', defaultdict(TreeEntry))
+
+    @property
+    def is_directory(self):
+        return self.mode & lib.GIT_FILEMODE_TREE
 
 
 class Tree(object):
@@ -314,9 +320,11 @@ class Tree(object):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
         self._dirty = True
+        self._entries = None
         self._manifest = None
 
     def read(self):
+        """reads this tree, *plus* fully realizes the manifest cache"""
         if not self._dirty:
             return
         tree = ffi.new('git_tree **')
@@ -325,7 +333,7 @@ class Tree(object):
         tree = tree[0]
 
         sha_map = {}
-        trees = _infinitedict()
+        trees = TreeEntry('', self.sha, lib.GIT_FILEMODE_TREE)
         cache = self._repo()._tree_cache
 
         @ffi.callback('int(const char *, const git_tree_entry *, void *)')
@@ -334,30 +342,43 @@ class Tree(object):
             base = trees
             if root:
                 for directory in root.split('/'):
-                    base = base[directory]
+                    base = base.children[directory]
             name = ffi.string(lib.git_tree_entry_name(entry))
             mode = lib.git_tree_entry_filemode(entry)
             sha = Oid(lib.git_tree_entry_id(entry)).sha
             if mode & lib.GIT_FILEMODE_TREE:
                 if sha in cache:
-                    base[name] = cache[sha]
+                    base.children[name] = cache[sha]
                     return 1
                 else:
-                    sha_map[sha] = base[name]
+                    sha_map[sha] = base.children[name] = TreeEntry(name, sha, mode)
                     return 0
             else:
-                base[name] = (sha, mode)
+                base.children[name] = TreeEntry(name, sha, mode)
                 return 0
 
         lib.git_tree_walk(tree, lib.GIT_TREEWALK_PRE, add_tree, ffi.NULL)
         lib.git_tree_free(tree)
 
         cache.update(sha_map)
+        self._entries = trees.children.items()
         self._manifest = {}
         self._flatten('', trees, self._manifest)
+        self._dirty = False
+
+    @property
+    def entries(self):
+        """return a single layer of TreeEntries
+
+        The higher-level way to accomplish what you're probably trying to do
+        is to use Commit.maanifest.
+        """
+        self.read()
+        return self._entries
 
     @property
     def manifest(self):
+        """return the fully realized tree under this point with full paths"""
         self.read()
         return self._manifest
 
@@ -366,12 +387,12 @@ class Tree(object):
         return self.oid.sha
 
     def _flatten(self, base, tree, manifest):
-        for k, v in tree.viewitems():
+        for k, v in tree.children.viewitems():
             full = k if not base else base + '/' + k
-            if isinstance(v, tuple):
-                manifest[full] = v
-            else:
+            if v.is_directory:
                 self._flatten(full, v, manifest)
+            else:
+                manifest[full] = v
 
 
 class Walker(object):

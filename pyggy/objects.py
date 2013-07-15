@@ -313,7 +313,6 @@ class Tree(object):
     def __init__(self, repo, oid):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
-        self._cache = repo._tree_cache
         self._dirty = True
         self._manifest = None
 
@@ -327,6 +326,7 @@ class Tree(object):
 
         sha_map = {}
         trees = _infinitedict()
+        cache = self._repo()._tree_cache
 
         @ffi.callback('int(const char *, const git_tree_entry *, void *)')
         def add_tree(root, entry, payload):
@@ -339,8 +339,8 @@ class Tree(object):
             mode = lib.git_tree_entry_filemode(entry)
             sha = Oid(lib.git_tree_entry_id(entry)).sha
             if mode & lib.GIT_FILEMODE_TREE:
-                if sha in self._cache:
-                    base[name] = self._cache[sha]
+                if sha in cache:
+                    base[name] = cache[sha]
                     return 1
                 else:
                     sha_map[sha] = base[name]
@@ -352,7 +352,7 @@ class Tree(object):
         lib.git_tree_walk(tree, lib.GIT_TREEWALK_PRE, add_tree, ffi.NULL)
         lib.git_tree_free(tree)
 
-        self._cache.update(sha_map)
+        cache.update(sha_map)
         self._manifest = {}
         self._flatten('', trees, self._manifest)
 

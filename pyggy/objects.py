@@ -67,15 +67,15 @@ class Blob(object):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid)
         self._data = None
+        self._size = None
 
     def read(self):
         blob = ffi.new('git_blob **')
         if lib.git_blob_lookup(blob, self._repo().pointer, self.oid.pointer):
             raise error.GitException
         blob = blob[0]
-        size = lib.git_blob_rawsize(blob)
-        raw = lib.git_blob_rawcontent(blob)
-        self._data = ffi.buffer(raw, size)[:]
+        self._size = lib.git_blob_rawsize(blob)
+        self._data = ffi.buffer(lib.git_blob_rawcontent(blob), self._size)[:]
         lib.git_blob_free(blob)
 
     @property
@@ -83,6 +83,16 @@ class Blob(object):
         if self._data is None:
             self.read()
         return self._data
+
+    def __len__(self):
+        if self._size is None:
+            blob = ffi.new('git_blob **')
+            if lib.git_blob_lookup(blob, self._repo().pointer, self.oid.pointer):
+                raise error.GitException
+            blob = blob[0]
+            self._size = lib.git_blob_rawsize(blob)
+            lib.git_blob_free(blob)
+        return self._size
 
 
 class Raw(object):

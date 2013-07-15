@@ -187,6 +187,12 @@ class Commit(object):
         return self._committer
 
     @property
+    def manifest(self):
+        """return the full file manifest"""
+        self.read()
+        return self.tree.manifest
+
+    @property
     def message(self):
         """return the lossy unicode representing this commit message"""
         self.read()

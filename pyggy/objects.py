@@ -65,6 +65,30 @@ class User(object):
         return '%s <%s>' % (self.name, self.email)
 
 
+class Blob(object):
+    """represents a blob from the ODB"""
+    def __init__(self, repo, oid=None):
+        self._repo = weakref.ref(repo)
+        self.oid = Oid(oid)
+        self._data = None
+
+    def read(self):
+        blob = ffi.new('git_blob **')
+        if lib.git_blob_lookup(blob, self._repo().pointer, self.oid.pointer):
+            raise error.GitException
+        blob = blob[0]
+        size = lib.git_blob_rawsize(blob)
+        raw = lib.git_blob_rawcontent(blob)
+        self._data = ffi.buffer(raw, size)[:]
+        lib.git_blob_free(blob)
+
+    @property
+    def data(self):
+        if self._data is None:
+            self.read()
+        return self._data
+
+
 class Raw(object):
     """represents a completely unparsed raw object from the ODB
 

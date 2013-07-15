@@ -5,10 +5,6 @@ from .core import lib, ffi
 from . import error, util
 
 
-def _infinitedict():
-    return defaultdict(_infinitedict)
-
-
 def _valid_ref_name(name):
     if name[0] == '/' or name[-1] == '/' or name[-1] == '.':
         return False

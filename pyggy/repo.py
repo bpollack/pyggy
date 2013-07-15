@@ -1,7 +1,7 @@
 from os.path import join as pathjoin
 
 from .core import lib, ffi
-from .objects import Commit, Oid, _Oid, Raw, ReferenceDb, Walker
+from .objects import Blob, Commit, Oid, _Oid, Raw, ReferenceDb, Walker
 from . import error
 
 
@@ -102,6 +102,10 @@ class Repo(object):
     def branches(self):
         """an editable dict-like object representing all branches"""
         return ReferenceDb(self, 'refs/heads/')
+
+    def blob(self, oid):
+        """returns a blob a given SHA or OID"""
+        return Blob(self, oid)
 
     def commit(self, oid):
         """return a commit from a given SHA or OID

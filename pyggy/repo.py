@@ -130,8 +130,8 @@ class Repo(object):
         with them will likely hard-crash your program.
 
         This method may safely be called multiple times."""
-        if self._repo:
-            if self._walker:
+        if getattr(self, '_repo', None):
+            if getattr(self, '_walker', None):
                 self._walker.close()
             lib.git_repository_free(self._repo)
             self._repo = None

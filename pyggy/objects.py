@@ -131,6 +131,10 @@ class Commit(object):
         if load:
             self.read()
 
+    def __getitem__(self, name):
+        self.read()
+        return self.tree[name]
+
     def read(self):
         """loads the actual commit data into this object
 
@@ -346,6 +350,14 @@ class Tree(object):
         self._dirty = True
         self._entries = None
         self._manifest = None
+
+    def __getitem__(self, name):
+        self.read()
+        entry = self._manifest[name]
+        if entry.is_directory:
+            return entry
+        else:
+            return Blob(self._repo(), entry.sha)
 
     def read(self):
         """reads this tree, *plus* fully realizes the manifest cache"""

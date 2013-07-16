@@ -184,6 +184,72 @@ class Commit(object):
 
         self._dirty = False
 
+    def changed_files(self, renames=False):
+        """calculate the files changed in this commit"""
+        self.read()
+
+        diff_list = None
+        old_tree = None
+
+        new_tree = ffi.new('git_tree **')
+        if lib.git_tree_lookup(new_tree, self._repo().pointer, self._tree.oid.pointer):
+            new_tree = None
+            raise error.GitException
+        new_tree = new_tree[0]
+
+        try:
+            if len(self._parent_ids) > 0:
+                old_tree = ffi.new('git_tree **')
+                old_commit = Commit(self._repo(), self._parent_ids[0])
+                if lib.git_tree_lookup(old_tree,
+                                       self._repo().pointer,
+                                       old_commit._tree.oid.pointer):
+                    old_tree = None
+                    raise error.GitException
+                old_tree = old_tree[0]
+
+            diff_list = ffi.new('git_diff_list **')
+            if lib.git_diff_tree_to_tree(diff_list,
+                                         self._repo().pointer,
+                                         new_tree,
+                                         old_tree if old_tree is not None else ffi.NULL,
+                                         ffi.NULL):
+                diff_list = None
+                raise error.GitException
+            diff_list = diff_list[0]
+
+            if renames:
+                lib.git_diff_find_similar(diff_list, ffi.NULL)
+            changes = {}
+
+            @ffi.callback('int(git_diff_delta *, float, void *)')
+            def add_changed_file(delta, progress, payload):
+                new_name = ffi.string(delta.new_file.path) if delta.new_file.path != ffi.NULL else None
+                old_name = ffi.string(delta.old_file.path) if delta.old_file.path != ffi.NULL else None
+                key = new_name if new_name else old_name
+                changes[key] = TreeChange(new_name,
+                                          old_name,
+                                          Oid(ffi.addressof(delta.old_file.oid)).sha,
+                                          Oid(ffi.addressof(delta.new_file.oid)).sha,
+                                          delta.old_file.mode,
+                                          delta.new_file.mode)
+                return 0
+
+            if lib.git_diff_foreach(diff_list,
+                                    add_changed_file,
+                                    ffi.NULL,
+                                    ffi.NULL,
+                                    ffi.NULL):
+                raise error.GitException
+            return changes
+        finally:
+            if new_tree is not None:
+                lib.git_tree_free(new_tree)
+            if old_tree is not None:
+                lib.git_tree_free(old_tree)
+            if diff_list is not None:
+                lib.git_diff_list_free(diff_list)
+
     @property
     def author(self):
         """return a User object representing this commit's author"""
@@ -362,6 +428,9 @@ class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
         return self.mode & lib.GIT_FILEMODE_TREE
 
 
+TreeChange = namedtuple('TreeChange', ['new_path', 'old_path', 'old_sha', 'new_sha', 'old_mode', 'new_mode'])
+
+
 class Tree(object):
     def __init__(self, repo, oid):
         self._repo = weakref.ref(repo)
@@ -376,11 +445,7 @@ class Tree(object):
 
     def __getitem__(self, name):
         self.read()
-        entry = self._manifest[name]
-        if entry.is_directory:
-            return entry
-        else:
-            return Blob(self._repo(), entry.sha)
+        return Blob(self._repo(), self._manifest[name].sha)
 
     def read(self):
         """reads this tree, *plus* fully realizes the manifest cache"""

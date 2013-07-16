@@ -564,7 +564,7 @@ class Walker(object):
         self._ensure_walker_allocated()
         lib.git_revwalk_reset(self._walker)
         if not include:
-            include = self._repo().branches().viewvalues()
+            include = self._repo().branches.values()
         for sha in include:
             lib.git_revwalk_push(self._walker, Oid(str(sha)).pointer)
         for sha in exclude:

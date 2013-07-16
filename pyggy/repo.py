@@ -28,6 +28,7 @@ class Repo(object):
         self._repo = None
         self._walker = None
         self._tree_cache = {}
+        self._commit_cache = {}
 
     def __del__(self):
         self.close()
@@ -113,7 +114,9 @@ class Repo(object):
         Note that ref and tag lookup is not performed here; use the
         generic __getattr__ behavior on this object for that.
         """
-        return Commit(self, oid)
+        if oid not in self._commit_cache:
+            self._commit_cache[oid] = Commit(self, oid)
+        return self._commit_cache[oid]
 
     def create(self, bare=False):
         """create the repository on disk

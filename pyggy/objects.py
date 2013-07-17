@@ -86,6 +86,19 @@ class Blob(object):
         self._data = ffi.buffer(lib.git_blob_rawcontent(blob), self._size)[:]
         lib.git_blob_free(blob)
 
+    def write(self):
+        """writes this blob out to the ODB
+
+        If the data hasn't changed since the last .read() operation,
+        this is a no-op.
+        """
+        if self.oid is not None:
+            return
+        oid = ffi.new('git_oid *')
+        if lib.git_blob_create_frombuffer(oid, self._repo().pointer, self.data, self._size):
+            raise error.GitException
+        self.oid = Oid(oid)
+
     @property
     def data(self):
         """the data backing this blob
@@ -95,6 +108,16 @@ class Blob(object):
         if self._data is None:
             self.read()
         return self._data
+
+    @data.setter
+    def data(self, data):
+        self.oid = None
+        self._data = data
+        self._size = len(data)
+
+    @property
+    def sha(self):
+        return self.oid.sha
 
     def __len__(self):
         """the size of this blob on-disk"""

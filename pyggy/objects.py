@@ -574,7 +574,7 @@ class Tree(object):
         """return a single layer of TreeEntries
 
         The higher-level way to accomplish what you're probably trying to do
-        is to use Commit.maanifest.
+        is to use Commit.manifest.
         """
         self.read()
         return self._entries

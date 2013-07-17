@@ -10,7 +10,7 @@ class RepoNotFoundException(error.GitException):
     pass
 
 
-_HEX = frozenset(c for c in 'abcdef0123456789')
+_HEX = frozenset('abcdef0123456789')
 
 
 class Repo(object):

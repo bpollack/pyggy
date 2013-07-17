@@ -564,6 +564,10 @@ class Tree(object):
         self._flatten('', trees, self._manifest)
         self._dirty = False
 
+    def mode(self, path):
+        self.read()
+        return self._manifest[path].mode
+
     @property
     def children(self):
         """convenience wrapper of children so that Trees look like TreeEntries"""

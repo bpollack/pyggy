@@ -117,7 +117,11 @@ class Blob(object):
 
     @property
     def sha(self):
-        return self.oid.sha
+        """return the SHA for this blob
+
+        This is a convenience wrapper around Blob.oid.sha
+        """
+        return self.oid.sha if self.oid else None
 
     def __len__(self):
         """the size of this blob on-disk"""
@@ -280,9 +284,9 @@ class Commit(object):
     def sha(self):
         """return the string SHA for this commit
 
-        This is a convenience function that simply wraps calling .oid.sha.
+        This is a convenience wrapper around Commit.oid.sha.
         """
-        return self.oid.sha
+        return self.oid.sha if self.oid else None
 
     @property
     def tree(self):
@@ -583,7 +587,11 @@ class Tree(object):
 
     @property
     def sha(self):
-        return self.oid.sha
+        """return the SHA for this tree
+
+        This is a convenience wrapper around Tree.oid.sha
+        """
+        return self.oid.sha if self.oid else None
 
     def _flatten(self, base, tree, manifest):
         for k, v in tree.children.viewitems():

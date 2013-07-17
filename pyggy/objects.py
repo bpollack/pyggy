@@ -70,7 +70,7 @@ class Blob(object):
         self._size = None
 
     def read(self):
-        """read this blob out fo the ODB
+        """read this blob out of the ODB
 
         Like all .read() methods in pyggy, you almost never need to call this method
         directly.  In addition, this is a no-op if the blob was created for write

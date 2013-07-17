@@ -65,11 +65,19 @@ class Blob(object):
     """represents a blob from the ODB"""
     def __init__(self, repo, oid=None):
         self._repo = weakref.ref(repo)
-        self.oid = Oid(oid)
+        self.oid = Oid(oid) if oid else None
         self._data = None
         self._size = None
 
     def read(self):
+        """read this blob out fo the ODB
+
+        Like all .read() methods in pyggy, you almost never need to call this method
+        directly.  In addition, this is a no-op if the blob was created for write
+        purposes.
+        """
+        if self._data or not self.oid:
+            return
         blob = ffi.new('git_blob **')
         if lib.git_blob_lookup(blob, self._repo().pointer, self.oid.pointer):
             raise error.GitException
@@ -80,11 +88,16 @@ class Blob(object):
 
     @property
     def data(self):
+        """the data backing this blob
+
+        Note that the *entire* blob will be read into memory.
+        """
         if self._data is None:
             self.read()
         return self._data
 
     def __len__(self):
+        """the size of this blob on-disk"""
         if self._size is None:
             blob = ffi.new('git_blob **')
             if lib.git_blob_lookup(blob, self._repo().pointer, self.oid.pointer):
@@ -132,7 +145,7 @@ class Commit(object):
     """
     def __init__(self, repo, oid=None, load=True):
         self._repo = weakref.ref(repo)
-        self.oid = Oid(oid)
+        self.oid = Oid(oid) if oid else None
         self._dirty = True
         if load:
             self.read()
@@ -360,6 +373,8 @@ class ReferenceDb(MutableMapping):
 
 
 class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
+    """represents an entry inside a Tree object"""
+
     def __init__(self, *args, **kwargs):
         super(TreeEntry, self).__init__(*args, **kwargs)
         self.children = kwargs.get('children', defaultdict(TreeEntry))
@@ -373,14 +388,22 @@ class TreeEntry(namedtuple('TreeEntry', ('name', 'sha', 'mode'))):
 
 
 class TreeChange(namedtuple('TreeChange', ['new_path', 'old_path', 'old_sha', 'new_sha', 'old_mode', 'new_mode', 'status'])):
+    """represents changes when two trees are compared against each other
+
+    Note that status is not guaranteed to be present; it will only show up at all if
+    the diff has been performed with rename tracking enabled.  Otherwise, it will
+    simply always be None.
+    """
+
     RENAMED = 'renamed'
     COPIED = 'copied'
 
 
 class Tree(object):
-    def __init__(self, repo, oid):
+    """represents a Git tree object"""
+    def __init__(self, repo, oid=None):
         self._repo = weakref.ref(repo)
-        self.oid = Oid(oid)
+        self.oid = Oid(oid) if oid else None
         self._dirty = True
         self._entries = None
         self._manifest = None
@@ -473,7 +496,7 @@ class Tree(object):
 
     def read(self):
         """reads this tree, *plus* fully realizes the manifest cache"""
-        if not self._dirty:
+        if not self.oid or not self._dirty:
             return
         tree = ffi.new('git_tree **')
         if lib.git_tree_lookup(tree, self._repo().pointer, self.oid.pointer):
@@ -549,6 +572,13 @@ class Tree(object):
 
 
 class Walker(object):
+    """allows walking through a repository's commits
+
+    You almost never need to instantiate this class directly.  Instead, you can usually
+    work with Repo's .walker property.  You should only ever create a Walker manually
+    if you need to do multiple, simultaneous walks.
+    """
+
     def __init__(self, repo):
         self._repo = weakref.ref(repo)
         self._walker = None
@@ -561,6 +591,12 @@ class Walker(object):
             self._walker = None
 
     def open(self, include=[], exclude=[], limit=None):
+        """open the walker for walking
+
+        Note that this walker can only perform one walk at once.  Create
+        multiple Walkers if you need to perform multiple walks simultaneously.
+        """
+
         self._ensure_walker_allocated()
         lib.git_revwalk_reset(self._walker)
         if not include:

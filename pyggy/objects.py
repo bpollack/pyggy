@@ -431,9 +431,8 @@ class Tree(object):
     def __init__(self, repo, oid=None):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid) if oid else None
-        self._dirty = True
-        self._entries = None
-        self._manifest = None
+        self._entries = {}
+        self._manifest = {}
 
     def __contains__(self, name):
         self.read()
@@ -522,8 +521,13 @@ class Tree(object):
                 lib.git_diff_list_free(diff_list)
 
     def read(self):
-        """reads this tree, *plus* fully realizes the manifest cache"""
-        if not self.oid or not self._dirty:
+        """reads this tree, *plus* fully realizes the manifest cache
+
+        This is a no-op if a tree is being built, rather than already stored in
+        the ODB, and is also a no-op if the tree has already been read.
+        """
+
+        if self.oid is None or self._entries:
             return
         tree = ffi.new('git_tree **')
         if lib.git_tree_lookup(tree, self._repo().pointer, self.oid.pointer):

@@ -50,15 +50,43 @@ class _Oid(object):
         return self.sha
 
 
+class Timestamp(object):
+    """represents a git timestamp"""
+    def __init__(self, seconds, offset):
+        self.seconds = seconds
+        self.offset = offset
+
+    def __repr__(self):
+        return 'Timestamp(%r, %r)' % (self.seconds, self.offset)
+
+
 class User(object):
     """represents a parsed Git user"""
-    def __init__(self, git_signature):
-        self.name = ffi.string(git_signature.name)
-        self.email = ffi.string(git_signature.email)
-        self.when = git_signature.when
+    def __init__(self, name, email, when):
+        self.name = name
+        self.email = email
+        self.when = when
+
+    @staticmethod
+    def from_signature(signature):
+        name = ffi.string(signature.name)
+        email = ffi.string(signature.email)
+        when = Timestamp(signature.when.time, signature.when.offset * 60)
+        return User(name, email, when)
+
+    def signature(self):
+        s = ffi.new('git_signature *')
+        s.name = self.name
+        s.email = self.email
+        s.when.time = self.time
+        s.when.offset = self.offset / 60
+        return s
 
     def __str__(self):
         return '%s <%s>' % (self.name, self.email)
+
+    def __repr__(self):
+        return 'User(%r, %r, %r)' % (self.name, self.email, self.when)
 
 
 class Blob(object):
@@ -208,8 +236,8 @@ class Commit(object):
             raise error.GitException
         commit = commit[0]
 
-        self._author = User(lib.git_commit_author(commit))
-        self._committer = User(lib.git_commit_committer(commit))
+        self._author = User.from_signature(lib.git_commit_author(commit))
+        self._committer = User.from_signature(lib.git_commit_committer(commit))
         self._message = ffi.string(lib.git_commit_message(commit))
         encoding = lib.git_commit_message_encoding(commit)
         self._message_encoding = ffi.string(encoding) if encoding != ffi.NULL else None

@@ -74,13 +74,15 @@ class User(object):
         when = Timestamp(signature.when.time, signature.when.offset * 60)
         return User(name, email, when)
 
-    def signature(self):
-        s = ffi.new('git_signature *')
-        s.name = self.name
-        s.email = self.email
-        s.when.time = self.time
-        s.when.offset = self.offset / 60
-        return s
+    def git_signature(self):
+        sig = ffi.new('git_signature **')
+        if lib.git_signature_new(sig,
+                                 self.name,
+                                 self.email,
+                                 self.when.seconds,
+                                 self.when.offset / 60):
+            raise error.GitException
+        return sig[0]
 
     def __str__(self):
         return '%s <%s>' % (self.name, self.email)
@@ -201,7 +203,14 @@ class Commit(object):
     def __init__(self, repo, oid=None, load=True):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid) if oid else None
-        # Primer for read() and friends
+
+        self._author = None
+        self._committer = None
+        self._commit_time = None
+        self._message = None
+        self._message_encoding = None
+        self._parent_ids = []
+        self._parents = None
         self._tree = None
 
         if load:
@@ -252,6 +261,53 @@ class Commit(object):
 
         lib.git_commit_free(commit)
 
+    def write(self):
+        """writes this commit to the ODB
+
+        If this commit has already been written to the ODB, this function
+        is a no-op.
+        """
+        if self.oid is not None:
+            return
+        committer = self._committer.git_signature()
+        author = self._author.git_signature() if self._author else self._committer.git_signature()
+        encoding = self._message_encoding or 'UTF-8'
+        tree = None
+        parents = []
+
+        try:
+            oid = ffi.new('git_oid *')
+
+            tree = ffi.new('git_tree **')
+            if lib.git_tree_lookup(tree, self._repo().pointer, self._tree.oid.pointer):
+                tree = None
+                raise error.GitException
+            tree = tree[0]
+            for p in self._parent_ids:
+                parent = ffi.new('git_commit **')
+                if lib.git_commit_lookup(parent, self._repo().pointer, Oid(p).pointer):
+                    raise error.GitException
+                parents.append(parent[0])
+            if lib.git_commit_create(oid,
+                                     self._repo().pointer,
+                                     ffi.NULL,
+                                     author,
+                                     committer,
+                                     encoding,
+                                     self._message,
+                                     tree,
+                                     len(parents),
+                                     parents):
+                raise error.GitException
+            self.oid = Oid(oid)
+        finally:
+            if tree:
+                lib.git_tree_free(tree)
+            lib.git_signature_free(committer)
+            lib.git_signature_free(author)
+            for p in parents:
+                lib.git_commit_free(p)
+
     def changed_files(self, parent=None):
         self.read()
         if not self._parent_ids:
@@ -268,11 +324,21 @@ class Commit(object):
         self.read()
         return self._author
 
+    @author.setter
+    def author(self, user):
+        self.oid = None
+        self._author = user
+
     @property
     def committer(self):
         """return a User object representing this commit's committer"""
         self.read()
         return self._committer
+
+    @committer.setter
+    def committer(self, user):
+        self.oid = None
+        self._committer = user
 
     @property
     def manifest(self):
@@ -285,6 +351,21 @@ class Commit(object):
         """return the lossy unicode representing this commit message"""
         self.read()
         return self._message
+
+    @message.setter
+    def message(self, message):
+        self.oid = None
+        self._message = message
+
+    @property
+    def message_encoding(self):
+        self.read()
+        return self._message_encoding
+
+    @message_encoding.setter
+    def message_encoding(self, encoding):
+        self.oid = None
+        self._message_encoding = encoding
 
     @property
     def parents(self):
@@ -308,6 +389,11 @@ class Commit(object):
         self.read()
         return self._parent_ids
 
+    @parent_ids.setter
+    def parent_ids(self, parent_ids):
+        self.oid = None
+        self._parent_ids = parent_ids
+
     @property
     def sha(self):
         """return the string SHA for this commit
@@ -327,6 +413,11 @@ class Commit(object):
         """
         self.read()
         return self._tree
+
+    @tree.setter
+    def tree(self, tree):
+        self.oid = None
+        self._tree = tree
 
     def __repr__(self):
         return '<Commit(%s)>' % self.oid
@@ -594,7 +685,47 @@ class Tree(object):
         self._entries = trees.children
         self._manifest = {}
         self._flatten('', trees, self._manifest)
-        self._dirty = False
+
+    def write(self, verify=True):
+        """saves this tree to the ODB
+
+        If this tree hasn't been changed since it was last read in,
+        this is a no-op.
+        """
+        if self.oid is not None:
+            return
+
+        # Ensure that all children trees and blobs have been written
+        # and exist
+        repo = self._repo()
+        if verify:
+            queue = self._entries.values()
+            while queue:
+                entry = queue.pop()
+                queue.extend(getattr(entry, 'children', {}).viewvalues())
+                if not repo.contains_object(entry.sha):
+                    raise ValueError('child trees have not been properly serialized')
+        builder = ffi.new('git_treebuilder **')
+        if lib.git_treebuilder_create(builder, ffi.NULL):
+            raise error.GitException
+        builder = builder[0]
+        try:
+            for e in self._entries.values():
+                if lib.git_treebuilder_insert(ffi.NULL, builder, e.name, Oid(e.sha).pointer, e.mode):
+                    raise error.GitException
+            oid = ffi.new('git_oid *')
+            if lib.git_treebuilder_write(oid, repo.pointer, builder):
+                raise error.GitException
+            self.oid = Oid(oid)
+        finally:
+            lib.git_treebuilder_free(builder)
+
+    def add_entry(self, entry):
+        """adds a given TreeEntry to this tree"""
+        self.oid = None
+        if self._entries is None:
+            self._entries = {}
+        self._entries[entry.name] = entry
 
     def mode(self, path):
         self.read()

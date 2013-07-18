@@ -118,6 +118,21 @@ class Repo(object):
             self._commit_cache[oid] = Commit(self, oid)
         return self._commit_cache[oid]
 
+    def contains_object(self, sha):
+        """checks whether the repo contains a given SHA, regardless of type
+
+        You generally should not use this method.  It's provided mostly as a sanity
+        check for other methods that are part of pyggy, to ensure that corrupt
+        data is not written.
+        """
+        odb = ffi.new('git_odb **')
+        if lib.git_repository_odb(odb, self._repo):
+            raise error.GitException
+        odb = odb[0]
+        contains = lib.git_odb_exists(odb, Oid(sha).pointer) != 0
+        lib.git_odb_free(odb)
+        return contains
+
     def create(self, bare=False):
         """create the repository on disk
 

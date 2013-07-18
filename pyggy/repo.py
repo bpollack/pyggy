@@ -1,7 +1,7 @@
 from os.path import join as pathjoin
 
 from .core import lib, ffi
-from .objects import Blob, Commit, Oid, _Oid, Raw, ReferenceDb, Walker
+from .objects import Blob, Commit, Config, Oid, _Oid, Raw, ReferenceDb, Walker
 from . import error
 
 
@@ -231,6 +231,18 @@ class Repo(object):
     @property
     def tags(self):
         return ReferenceDb(self, 'refs/tags/')
+
+    @property
+    def config(self):
+        return Config(self)
+
+    @property
+    def config_path(self):
+        """the path to this repository's local config file"""
+        if lib.git_repository_is_bare(self._repo):
+            return pathjoin(self.path, 'config')
+        else:
+            return pathjoin(self.path, '.git', 'config')
 
     @property
     def odb_path(self):

@@ -191,6 +191,86 @@ class Raw(object):
             lib.git_odb_free(odb)
 
 
+class Config(MutableMapping):
+    """represents a Git configuration file
+
+    This class can currently only handle on-disk configuration.
+    The underlying libgit2 library doesn't provide a mechanism
+    for in-memory commit strings, so we don't here, either.
+    """
+
+    def __init__(self, repo):
+        self._repo = weakref.ref(repo)
+        self._settings = None
+        self._dirty = set()
+
+    def read(self):
+        if self._settings is not None:
+            return
+        config = ffi.new('git_config **')
+        if lib.git_config_open_ondisk(config, self._repo().config_path):
+            raise error.GitException
+        config = config[0]
+
+        @ffi.callback('int(const git_config_entry *, void *)')
+        def add_entry(entry, payload):
+            self._settings[ffi.string(entry.name)] = ffi.string(entry.value)
+            return 0
+
+        try:
+            self._settings = {}
+            if lib.git_config_foreach(config, add_entry, ffi.NULL):
+                self._settings = None
+                raise error.GitException
+            self._dirty = set()
+        finally:
+            lib.git_config_free(config)
+
+    def write(self):
+        self.read()
+        config = ffi.new('git_config **')
+        if lib.git_config_open_ondisk(config, self._repo().config_path):
+            raise error.GitException
+        config = config[0]
+
+        try:
+            for key in self._dirty:
+                if key in self._settings:
+                    if lib.git_config_set_string(config, key, self._settings[key]):
+                        raise error.GitException
+                else:
+                    if lib.git_config_delete_entry(config, key):
+                        raise error.GitException
+            self._dirty.clear()
+        finally:
+            lib.git_config_free(config)
+
+    def viewitems(self):
+        self.read()
+        return self._settings.viewitems()
+
+    def __getitem__(self, what):
+        self.read()
+        return self._settings[what]
+
+    def __setitem__(self, what, value):
+        self.read()
+        self._settings[what] = value
+        self._dirty.add(what)
+
+    def __delitem__(self, what):
+        self.read()
+        del self._settings[what]
+        self._dirty.add(what)
+
+    def __len__(self):
+        self.read()
+        return len(self._settings)
+
+    def __iter__(self):
+        return iter(self._settings)
+
+
 class Commit(object):
     """represents a Git commit
 

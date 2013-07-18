@@ -68,8 +68,14 @@ class Repo(object):
         Note that this method defaults to permanently storing the alterate
         on disk.  If you do not want that behavior, be sure to specify
         permanent=False when calling.
+
+        Also note that Git limits you to five alternates.  Because we
+        sometimes need the fifth for walking, this actually will stop you
+        at four.
         """
         if permanent:
+            if len(self.get_alternates()) >= 4:
+                return False
             with open(pathjoin(self.odb_path, 'info', 'alternates'), 'ab+') as alternates:
                 if alternates.tell() > 0:
                     alternates.seek(-1)
@@ -84,6 +90,7 @@ class Repo(object):
         odb = odb[0]
         lib.git_odb_add_disk_alternate(odb, path)
         lib.git_odb_free(odb)
+        return True
 
     def get_alternates(self):
         """gets the full list of alternates

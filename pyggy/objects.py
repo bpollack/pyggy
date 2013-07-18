@@ -249,6 +249,14 @@ class Config(MutableMapping):
         self.read()
         return self._settings.viewitems()
 
+    def viewkeys(self):
+        self.read()
+        return self._settings.viewkeys()
+
+    def viewvalues(self):
+        self.read()
+        return self._settings.viewvalues()
+
     def __getitem__(self, what):
         self.read()
         return self._settings[what]
@@ -268,6 +276,7 @@ class Config(MutableMapping):
         return len(self._settings)
 
     def __iter__(self):
+        self.read()
         return iter(self._settings)
 
 

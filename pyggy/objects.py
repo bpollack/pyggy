@@ -173,7 +173,9 @@ class Commit(object):
     def __init__(self, repo, oid=None, load=True):
         self._repo = weakref.ref(repo)
         self.oid = Oid(oid) if oid else None
-        self._dirty = True
+        # Primer for read() and friends
+        self._tree = None
+
         if load:
             self.read()
 
@@ -194,7 +196,7 @@ class Commit(object):
         """
 
         # Abort if we're not dirty or not a real commit
-        if not self._dirty or self.oid is None:
+        if self._tree is not None or self.oid is None:
             return
 
         commit = ffi.new('git_commit **')
@@ -221,8 +223,6 @@ class Commit(object):
         self._tree = Tree(self._repo(), lib.git_commit_tree_id(commit))
 
         lib.git_commit_free(commit)
-
-        self._dirty = False
 
     def changed_files(self, parent=None):
         self.read()

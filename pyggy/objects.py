@@ -236,11 +236,14 @@ class Config(MutableMapping):
         try:
             for key in self._dirty:
                 if key in self._settings:
-                    if lib.git_config_set_string(config, key, self._settings[key]):
-                        raise error.GitException
+                    if self._settings[key]:
+                        err = lib.git_config_set_string(config, key, self._settings[key])
+                        if err:
+                            raise error.GitException(err)
                 else:
-                    if lib.git_config_delete_entry(config, key):
-                        raise error.GitException
+                    err = lib.git_config_delete_entry(config, key)
+                    if err:
+                        raise error.GitException(err)
             self._dirty.clear()
         finally:
             lib.git_config_free(config)

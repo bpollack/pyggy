@@ -5,10 +5,10 @@ from .objects import Blob, Commit, Config, Oid, _Oid, Raw, ReferenceDb, Walker
 from . import error
 
 
-class RepoNotFoundException(error.GitException):
+class RepoNotFoundException(Exception):
     """represents that a repository could not be foudn on disk"""
-    pass
-
+    def __init__(self, path):
+        super(RepoNotFoundException, self).__init__('repo not found: %s' % path)
 
 _HEX = frozenset('abcdef0123456789')
 

@@ -684,8 +684,8 @@ class Tree(object):
             diff_list = ffi.new('git_diff_list **')
             if lib.git_diff_tree_to_tree(diff_list,
                                          self._repo().pointer,
-                                         new_tree,
                                          old_tree if old_tree is not None else ffi.NULL,
+                                         new_tree,
                                          ffi.NULL):
                 diff_list = None
                 raise error.GitException
